@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" fill="none">
+  <defs>
+    <!-- Metallic Gold Gradients -->
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5D77F"/>
+      <stop offset="35%" stop-color="#E5B84B"/>
+      <stop offset="70%" stop-color="#C8922E"/>
+      <stop offset="100%" stop-color="#9A6B1A"/>
+    </linearGradient>
+    <linearGradient id="silverGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+    <linearGradient id="navyBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0D1B24"/>
+      <stop offset="100%" stop-color="#050E14"/>
+    </linearGradient>
+    <filter id="goldGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#C8922E" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background Polygon shape inspired by logo artwork -->
+  <g filter="url(#goldGlow)">
+    <!-- Outer Gold Border Shield -->
+    <polygon points="40,90 320,30 760,45 720,200 240,240 40,200" fill="url(#goldGradient)"/>
+    <!-- Inner Deep Navy Shield -->
+    <polygon points="46,94 318,36 754,50 714,194 242,234 46,194" fill="url(#navyBg)" stroke="url(#goldGradient)" stroke-width="2"/>
+  </g>
+
+  <!-- TRINEX Main Stylized Text -->
+  <g font-family="'Montserrat', 'Arial Black', sans-serif" font-weight="900" font-style="italic">
+    <!-- TRINEX Shadow -->
+    <text x="398" y="143" font-size="110" fill="#000000" opacity="0.6" text-anchor="middle" letter-spacing="4">TRINEX</text>
+    <!-- TRINEX Metallic Text -->
+    <text x="400" y="140" font-size="110" fill="url(#silverGradient)" stroke="url(#goldGradient)" stroke-width="2.5" text-anchor="middle" letter-spacing="4">TRINEX</text>
+  </g>
+
+  <!-- EQUIPMENT Sub-banner text -->
+  <g font-family="'Montserrat', sans-serif" font-weight="800" font-style="italic">
+    <text x="400" y="182" font-size="34" fill="url(#goldGradient)" text-anchor="middle" letter-spacing="12">EQUIPMENT</text>
+  </g>
+
+  <!-- Subtitle Tagline Line -->
+  <line x1="120" y1="202" x2="680" y2="202" stroke="url(#goldGradient)" stroke-width="2" stroke-linecap="round"/>
+  <text x="400" y="220" font-family="'Inter', sans-serif" font-weight="700" font-size="16" fill="#F8FAFC" text-anchor="middle" letter-spacing="4">PROFESSIONAL KITCHEN EQUIPMENT</text>
+
+  <!-- Sales Service Spares Badges -->
+  <g transform="translate(195, 232)">
+    <!-- Sales Badge -->
+    <rect x="0" y="0" width="120" height="32" rx="4" fill="url(#goldGradient)"/>
+    <text x="60" y="21" font-family="'Inter', sans-serif" font-weight="800" font-size="13" fill="#07131C" text-anchor="middle" letter-spacing="1">SALES</text>
+
+    <!-- Service Badge -->
+    <rect x="145" y="0" width="120" height="32" rx="4" fill="url(#goldGradient)"/>
+    <text x="205" y="21" font-family="'Inter', sans-serif" font-weight="800" font-size="13" fill="#07131C" text-anchor="middle" letter-spacing="1">SERVICE</text>
+
+    <!-- Spares Badge -->
+    <rect x="290" y="0" width="120" height="32" rx="4" fill="url(#goldGradient)"/>
+    <text x="350" y="21" font-family="'Inter', sans-serif" font-weight="800" font-size="13" fill="#07131C" text-anchor="middle" letter-spacing="1">SPARES</text>
+  </g>
+</svg>

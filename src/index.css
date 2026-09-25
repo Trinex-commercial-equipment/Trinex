@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #07131C;
+    color: #F1F5F9;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', sans-serif;
+  }
+}
+
+/* Custom Metallic Gold Gradients and Borders */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #FFF0B8 0%, #E5B84B 40%, #C8922E 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-bg {
+  background: linear-gradient(135deg, #F0CA65 0%, #C8922E 50%, #A87620 100%);
+}
+
+.gold-gradient-bg-hover {
+  background: linear-gradient(135deg, #F5D77F 0%, #D99D36 50%, #B88224 100%);
+}
+
+.gold-border {
+  border-color: #C8922E;
+}
+
+.navy-card {
+  background-color: #0D1B24;
+  border: 1px solid rgba(200, 146, 46, 0.18);
+}
+
+.navy-card:hover {
+  border-color: rgba(200, 146, 46, 0.45);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07131C;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1F2E3A;
+  border-radius: 4px;
+  border: 1px solid rgba(200, 146, 46, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C8922E;
+}
+
+/* Metallic Badge Effect */
+.gold-badge {
+  background: linear-gradient(180deg, #E5B84B 0%, #C8922E 100%);
+  color: #07131C;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(200, 146, 46, 0.25);
+}
