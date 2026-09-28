@@ -1,288 +1,314 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { SectionHeading } from '../components/SectionHeading';
-import { ProductCard } from '../components/ProductCard';
-import { ServiceCard } from '../components/ServiceCard';
-import { GoogleMap } from '../components/GoogleMap';
-import { PRODUCT_CATEGORIES, FEATURED_PRODUCTS } from '../data/equipmentData';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
+  ArrowRight, 
+  MessageCircle, 
   ShieldCheck, 
   Wrench, 
   PackageCheck, 
-  Flame, 
-  CheckCircle2, 
-  ArrowRight, 
-  ChevronRight, 
   Zap, 
-  Thermometer, 
   Leaf, 
-  Award
+  Award, 
+  Thermometer, 
+  CheckCircle2, 
+  Phone,
+  Flame,
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
+import { productStore } from '../services/productStore';
+import { Product, Category } from '../types/product';
+import { ProductCard } from '../components/ProductCard';
 
 interface HomeProps {
   onOpenQuoteModal: (productContext?: string) => void;
 }
 
 export const Home: React.FC<HomeProps> = ({ onOpenQuoteModal }) => {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<string>('all');
+  const [fastMovingProducts, setFastMovingProducts] = useState<Product[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  const filteredProducts = activeTab === 'all' 
-    ? FEATURED_PRODUCTS 
-    : FEATURED_PRODUCTS.filter(p => p.categorySlug === activeTab);
+  useEffect(() => {
+    const updateData = () => {
+      setFastMovingProducts(productStore.getFastMovingProducts().slice(0, 4));
+      setFeaturedProducts(productStore.getFeaturedProducts().slice(0, 6));
+      setCategories(productStore.getCategories());
+    };
+
+    updateData();
+    const unsubscribe = productStore.subscribe(updateData);
+    return () => unsubscribe();
+  }, []);
+
+  const handleHeroWhatsApp = () => {
+    const text = encodeURIComponent(
+      'Hello Trinex Equipment, I am looking for commercial kitchen equipment for my food business. Please share catalogues and pricing.'
+    );
+    window.open(`https://wa.me/919030847474?text=${text}`, '_blank');
+  };
+
+  const handleFastMovingWhatsApp = (product: Product) => {
+    const text = encodeURIComponent(
+      `Hello Trinex Equipment,\nI am interested in:\nProduct: ${product.name}\nModel: ${product.model}\n\nPlease share the price and availability.`
+    );
+    window.open(`https://wa.me/919030847474?text=${text}`, '_blank');
+  };
 
   return (
-    <div className="space-y-12 sm:space-y-20 lg:space-y-24">
+    <div className="space-y-14 sm:space-y-20 bg-white">
       
       {/* ==================================================
-          1. HERO SECTION WITH OFFICIAL TRINEX BANNER
+          1. HERO SECTION (PRODUCT-FIRST, PRESTIGIOUS B2B)
           ================================================== */}
-      <section className="relative pt-6 pb-12 sm:pt-12 sm:pb-16 lg:pt-16 lg:pb-24 bg-trinex-dark border-b border-trinex-gold/20 overflow-hidden">
-        {/* Glow backdrop */}
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-trinex-navy/40 pointer-events-none rounded-l-full blur-3xl" />
+      <section className="relative bg-gradient-to-b from-white via-slate-50 to-slate-100/60 border-b border-slate-200/80 py-12 sm:py-16 lg:py-20 overflow-hidden">
+        {/* Subtle decorative background glow */}
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-slate-900/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             
-            {/* Left Column */}
-            <div className="lg:col-span-6 space-y-4 sm:space-y-6 text-left">
+            {/* Left Column: Heading & CTAs */}
+            <div className="lg:col-span-7 space-y-6 text-left">
               
-              <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xs bg-trinex-navy border border-trinex-gold/40 text-trinex-gold font-extrabold text-[10px] sm:text-xs tracking-widest uppercase shadow">
-                <span className="w-2 h-2 rounded-full bg-trinex-gold animate-ping" />
-                <span>SALES • SERVICE • SPARES</span>
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-trinex-red animate-pulse" />
+                <span className="text-[11px] font-black tracking-widest text-slate-800 uppercase">
+                  SALES • SERVICE • SPARES
+                </span>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight uppercase leading-[1.1] font-display">
-                ENGINEERING <br />
-                <span className="gold-gradient-text">BETTER COMMERCIAL</span> <br />
-                KITCHENS
+              {/* Title */}
+              <h1 className="text-3xl sm:text-5xl lg:text-[56px] font-black text-slate-900 uppercase tracking-tight leading-[1.08] font-display">
+                Professional <br />
+                <span className="text-trinex-red">Kitchen Equipment</span>
               </h1>
 
-              <p className="text-xs sm:text-base text-slate-300 leading-relaxed max-w-xl font-normal">
-                Professional kitchen equipment solutions backed by quality, reliability and dependable service. Supplying high-efficiency induction equipment, heavy-duty ranges, and commercial machinery across Hyderabad & Telangana.
+              {/* Subheading */}
+              <p className="text-sm sm:text-base lg:text-lg text-slate-600 leading-relaxed max-w-xl font-normal">
+                Reliable commercial kitchen solutions backed by Sales, Service & Spares. Delivering high-efficiency induction systems, heavy-duty cooking ranges, and commercial food machinery across Hyderabad and regional kitchens.
               </p>
 
-              {/* Induction Highlights Badges */}
-              <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] sm:text-xs font-bold text-slate-200">
-                <div className="flex items-center gap-2 bg-trinex-navy p-2 sm:p-2.5 rounded border border-trinex-gold/20">
-                  <Zap className="w-4 h-4 text-trinex-gold flex-shrink-0" />
-                  <span>Fast Heating</span>
-                </div>
-                <div className="flex items-center gap-2 bg-trinex-navy p-2 sm:p-2.5 rounded border border-trinex-gold/20">
-                  <Leaf className="w-4 h-4 text-trinex-gold flex-shrink-0" />
-                  <span>Energy Efficient</span>
-                </div>
-                <div className="flex items-center gap-2 bg-trinex-navy p-2 sm:p-2.5 rounded border border-trinex-gold/20">
-                  <ShieldCheck className="w-4 h-4 text-trinex-gold flex-shrink-0" />
-                  <span>Safe & Reliable</span>
-                </div>
-                <div className="flex items-center gap-2 bg-trinex-navy p-2 sm:p-2.5 rounded border border-trinex-gold/20">
-                  <Thermometer className="w-4 h-4 text-trinex-gold flex-shrink-0" />
-                  <span>Precise Temperature</span>
-                </div>
-              </div>
-
-              {/* CTAs */}
-              <div className="pt-2 sm:pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+              {/* Harmonious CTAs */}
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <Link
                   to="/products"
-                  className="gold-gradient-bg hover:gold-gradient-bg-hover text-trinex-dark font-extrabold text-xs sm:text-sm px-6 py-3.5 sm:px-7 sm:py-4 rounded-xs uppercase tracking-widest shadow-gold-glow transition-all text-center flex items-center justify-center gap-2 group"
+                  className="px-7 py-3.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-sm hover:shadow-md transition-all text-center flex items-center justify-center gap-2 group"
                 >
-                  <span>Explore Equipment</span>
+                  <span>Explore Products</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
 
                 <button
-                  onClick={() => onOpenQuoteModal()}
-                  className="bg-trinex-navy hover:bg-slate-800 text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 sm:px-7 sm:py-4 rounded-xs uppercase tracking-widest border border-trinex-gold/40 hover:border-trinex-gold transition-all text-center flex items-center justify-center gap-2 shadow"
+                  onClick={handleHeroWhatsApp}
+                  className="px-7 py-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-sm hover:shadow-md transition-all text-center flex items-center justify-center gap-2"
                 >
-                  <span>Get a Quote</span>
+                  <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>Get Quote on WhatsApp</span>
                 </button>
               </div>
 
-            </div>
-
-            {/* Right Column: Official Trinex Equipment Banner Display */}
-            <div className="lg:col-span-6 relative">
-              <div className="rounded-sm overflow-hidden border-2 border-trinex-gold/40 shadow-card-dark bg-white group relative">
-                <img
-                  src="/assets/images/trinex_induction_banner.jpg"
-                  alt="Trinex Commercial Induction Equipment Showcase"
-                  className="w-full h-auto object-contain transition-transform duration-500 group-hover:scale-102"
-                />
-                <div className="bg-trinex-navy px-3 py-2.5 sm:px-4 sm:py-3 border-t border-trinex-gold/30 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-xs font-bold text-slate-200">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>SMART COOKING • BETTER BUSINESS</span>
-                  </div>
-                  <span className="text-trinex-gold uppercase tracking-wider">CE • GS • RoHS</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ==================================================
-          2. OFFICIAL BRANDING & VALUE PROPOSITION
-          ================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <div className="bg-trinex-navy border-2 border-trinex-gold/30 rounded-sm p-5 sm:p-8 lg:p-10 shadow-2xl relative overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
-            
-            <div className="lg:col-span-7 space-y-3 sm:space-y-4 text-left">
-              <span className="px-3 py-1 rounded bg-trinex-dark border border-trinex-gold/30 text-trinex-gold text-[10px] sm:text-xs font-bold uppercase tracking-widest inline-block">
-                Professional B2B Equipment
-              </span>
-              <h2 className="text-xl sm:text-3xl lg:text-4xl font-black text-white font-display">
-                Cook Smarter with Trinex!
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Trinex Equipment Pvt Ltd supplies commercial induction hobs, wok ranges, stock pot stoves, holding cabinets, and custom stainless steel kitchen infrastructure for high-demand commercial environments.
-              </p>
-
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-2">
-                <div className="bg-trinex-dark p-2.5 sm:p-3 rounded border border-slate-800 text-center">
-                  <span className="text-base sm:text-lg font-black text-trinex-gold block">Fast</span>
-                  <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold">Heating Speed</span>
-                </div>
-                <div className="bg-trinex-dark p-2.5 sm:p-3 rounded border border-slate-800 text-center">
-                  <span className="text-base sm:text-lg font-black text-trinex-gold block">Energy</span>
-                  <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold">Efficient System</span>
-                </div>
-                <div className="bg-trinex-dark p-2.5 sm:p-3 rounded border border-slate-800 text-center">
-                  <span className="text-base sm:text-lg font-black text-trinex-gold block">Precise</span>
-                  <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold">Temp Regulation</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-5">
-              <div className="rounded border border-trinex-gold/30 overflow-hidden shadow">
-                <img 
-                  src="/assets/logo/trinex_card_banner.jpg" 
-                  alt="Trinex Official Equipment & Showroom Card" 
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-      </section>
-
-      {/* ==================================================
-          3. TRUST / VALUE SECTION
-          ================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <SectionHeading
-          badge="Core Brand Pillars"
-          title="Built for Professional Kitchens"
-          subtitle="Engineered to meet the rigorous operational standards of high-volume food service environments."
-        />
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-8 sm:mt-12">
-          
-          <div className="bg-trinex-navy border border-trinex-gold/20 hover:border-trinex-gold p-5 sm:p-6 rounded-sm space-y-3 transition-all">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded bg-trinex-dark border border-trinex-gold/30 flex items-center justify-center text-trinex-gold">
-              <Award className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <h3 className="text-base sm:text-lg font-black text-white uppercase font-display">QUALITY</h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Reliable equipment designed for demanding commercial environments using food-grade materials.
-            </p>
-          </div>
-
-          <div className="bg-trinex-navy border border-trinex-gold/20 hover:border-trinex-gold p-5 sm:p-6 rounded-sm space-y-3 transition-all">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded bg-trinex-dark border border-trinex-gold/30 flex items-center justify-center text-trinex-gold">
-              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <h3 className="text-base sm:text-lg font-black text-white uppercase font-display">RELIABILITY</h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Solutions focused on consistent performance, heavy-duty durability, and long-term business use.
-            </p>
-          </div>
-
-          <div className="bg-trinex-navy border border-trinex-gold/20 hover:border-trinex-gold p-5 sm:p-6 rounded-sm space-y-3 transition-all">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded bg-trinex-dark border border-trinex-gold/30 flex items-center justify-center text-trinex-gold">
-              <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <h3 className="text-base sm:text-lg font-black text-white uppercase font-display">PERFORMANCE</h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Equipment selected to support efficient, rapid, high-volume professional kitchen operations.
-            </p>
-          </div>
-
-          <div className="bg-trinex-navy border border-trinex-gold/20 hover:border-trinex-gold p-5 sm:p-6 rounded-sm space-y-3 transition-all">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded bg-trinex-dark border border-trinex-gold/30 flex items-center justify-center text-trinex-gold">
-              <Wrench className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <h3 className="text-base sm:text-lg font-black text-white uppercase font-display">SERVICE SUPPORT</h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Dedicated service engineers and genuine spare-parts support to minimize kitchen downtime.
-            </p>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ==================================================
-          4. PRODUCT CATEGORIES SHOWCASE
-          ================================================== */}
-      <section className="bg-trinex-light-bg py-12 sm:py-16 lg:py-20 border-y border-slate-200 text-trinex-dark">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <SectionHeading
-            light={true}
-            badge="Equipment Categories"
-            title="Commercial Kitchen Equipment"
-            subtitle="Complete equipment solutions structured for modern commercial kitchens."
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mt-8 sm:mt-12">
-            {PRODUCT_CATEGORIES.map((cat) => (
-              <div 
-                key={cat.id} 
-                className="bg-white border border-slate-300 rounded-sm overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 group flex flex-col justify-between"
-              >
-                <div>
-                  {/* Category Image Frame: 100% full view of banner image with top-right model count */}
-                  <div className="relative bg-slate-950 p-2 border-b border-slate-200 flex items-center justify-center min-h-[200px] sm:min-h-[220px]">
-                    <img 
-                      src={cat.image} 
-                      alt={cat.name}
-                      className="w-full h-auto max-h-56 sm:max-h-60 object-contain group-hover:scale-102 transition-transform duration-300 shadow-sm"
-                    />
-                    
-                    {/* Top Right Model Count Badge */}
-                    <div className="absolute top-3 right-3 bg-trinex-dark/95 text-trinex-gold text-[10px] font-extrabold px-2.5 py-1 rounded border border-trinex-gold/30 shadow">
-                      {cat.itemCount}+ Models
+              {/* Integrated Feature Bar */}
+              <div className="pt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-white border border-slate-200/90 shadow-xs">
+                  <div className="flex items-center gap-2 px-1">
+                    <Zap className="w-4 h-4 text-trinex-red flex-shrink-0" />
+                    <div>
+                      <span className="block text-xs font-bold text-slate-900">Fast Heating</span>
+                      <span className="block text-[10px] text-slate-500">Thermal response</span>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 px-1">
+                    <Leaf className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <div>
+                      <span className="block text-xs font-bold text-slate-900">Energy Efficient</span>
+                      <span className="block text-[10px] text-slate-500">&gt;90% transfer</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 px-1">
+                    <ShieldCheck className="w-4 h-4 text-trinex-gold flex-shrink-0" />
+                    <div>
+                      <span className="block text-xs font-bold text-slate-900">Heavy Duty</span>
+                      <span className="block text-[10px] text-slate-500">Commercial grade</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 px-1">
+                    <Wrench className="w-4 h-4 text-trinex-red flex-shrink-0" />
+                    <div>
+                      <span className="block text-xs font-bold text-slate-900">Service Backed</span>
+                      <span className="block text-[10px] text-slate-500">Hyderabad hub</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                  <div className="p-5">
-                    <h3 className="font-extrabold text-base sm:text-lg text-trinex-dark group-hover:text-trinex-gold-dark transition-colors font-display">
+            </div>
+
+            {/* Right Column: Hero Visual Showcase */}
+            <div className="lg:col-span-5">
+              <div className="rounded-2xl overflow-hidden border border-slate-200/90 bg-white shadow-card p-3 sm:p-4 group">
+                <div className="relative rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center p-3 border border-slate-100">
+                  <img
+                    src="/assets/images/trinex_induction_banner.jpg"
+                    alt="Trinex Commercial Induction Equipment Showcase"
+                    className="w-full h-auto object-contain transition-transform duration-500 group-hover:scale-102"
+                  />
+                  <div className="absolute top-3 left-3 bg-slate-900/90 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded shadow-xs">
+                    Commercial Induction Range
+                  </div>
+                </div>
+
+                <div className="pt-3 px-1 flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-800">
+                    High Efficiency • Flame-Free Precision
+                  </span>
+                  <Link to="/products" className="font-bold text-trinex-red hover:underline flex items-center gap-1">
+                    <span>View Catalog</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ==================================================
+          2. FAST-MOVING PRODUCTS (DYNAMIC 2-4 PRODUCTS)
+          ================================================== */}
+      {fastMovingProducts.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 pb-4">
+            <div>
+              <span className="text-xs font-black uppercase tracking-widest text-trinex-red block mb-1">
+                High Demand
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 uppercase tracking-tight">
+                Fast-Moving Commercial Equipment
+              </h2>
+            </div>
+            <Link
+              to="/products"
+              className="text-xs font-bold text-trinex-red hover:underline flex items-center gap-1 self-start sm:self-auto"
+            >
+              <span>Explore All Equipment</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {fastMovingProducts.map((product) => (
+              <div 
+                key={product.id}
+                className="bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between p-4 group"
+              >
+                <div>
+                  <Link 
+                    to={`/products/${product.slug}`}
+                    className="block w-full pt-[75%] relative bg-slate-50 rounded-lg overflow-hidden mb-3 border border-slate-100"
+                  >
+                    <img
+                      src={product.images[0] || '/assets/images/countertop_induction_hob.png'}
+                      alt={product.name}
+                      className="absolute inset-0 w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <span className="absolute top-2 left-2 bg-trinex-red text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-xs">
+                      Fast Moving
+                    </span>
+                  </Link>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-trinex-red uppercase tracking-wider">
+                      {product.category}
+                    </span>
+                    <Link to={`/products/${product.slug}`} className="block">
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-trinex-red transition-colors line-clamp-1">
+                        {product.name}
+                      </h3>
+                    </Link>
+                    {product.model && (
+                      <p className="text-xs text-slate-500 font-medium">
+                        Model: <span className="text-slate-900 font-semibold">{product.model}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-4 space-y-2">
+                  <button
+                    onClick={() => handleFastMovingWhatsApp(product)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-all"
+                  >
+                    <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>Get Quote on WhatsApp</span>
+                  </button>
+
+                  <Link
+                    to={`/products/${product.slug}`}
+                    className="w-full flex items-center justify-center gap-1 py-2 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-bold transition-colors"
+                  >
+                    <span>View Details</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ==================================================
+          3. PRODUCT CATEGORIES (MANAGEABLE VIA ADMIN)
+          ================================================== */}
+      <section className="bg-slate-50/80 py-14 sm:py-18 border-y border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <span className="text-xs font-black uppercase tracking-widest text-trinex-red block">
+              Equipment Categories
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase tracking-tight">
+              Commercial Kitchen Equipment
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600">
+              Complete equipment solutions structured for modern commercial kitchens.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {categories.map((cat) => (
+              <Link
+                key={cat.id}
+                to={`/products?category=${cat.slug}`}
+                className="group bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-card-hover transition-all duration-300 overflow-hidden flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-full h-44 bg-slate-100 overflow-hidden relative">
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
+                    <span className="absolute bottom-2.5 left-3 text-white text-xs font-bold uppercase tracking-wider">
                       {cat.name}
-                    </h3>
-                    <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                       {cat.description}
                     </p>
                   </div>
                 </div>
 
-                <div className="p-5 pt-0">
-                  <button
-                    onClick={() => navigate(`/products?category=${cat.slug}`)}
-                    className="w-full bg-slate-900 hover:bg-trinex-gold text-white hover:text-trinex-dark text-xs font-bold py-2.5 sm:py-3 rounded-xs transition-colors flex items-center justify-center gap-1.5 uppercase tracking-wider shadow"
-                  >
-                    <span>View Equipment Category</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                <div className="p-4 pt-0 flex items-center justify-between text-xs font-bold text-trinex-red group-hover:underline">
+                  <span>Browse Products</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 
@@ -290,132 +316,306 @@ export const Home: React.FC<HomeProps> = ({ onOpenQuoteModal }) => {
       </section>
 
       {/* ==================================================
-          5. FEATURED EQUIPMENT SHOWCASE
+          4. FEATURED PRODUCTS
+          ================================================== */}
+      {featuredProducts.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 pb-4">
+            <div>
+              <span className="text-xs font-black uppercase tracking-widest text-trinex-red block mb-1">
+                Featured Equipment
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 uppercase tracking-tight">
+                Recommended For Commercial Kitchens
+              </h2>
+            </div>
+            <Link
+              to="/products"
+              className="text-xs font-bold text-trinex-red hover:underline flex items-center gap-1 self-start sm:self-auto"
+            >
+              <span>View Full Catalogue</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredProducts.map((p) => (
+              <ProductCard key={p.id} product={p} onOpenQuoteModal={onOpenQuoteModal} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ==================================================
+          5. INTRODUCING TRINEX COMMERCIAL INDUCTION
           ================================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 sm:mb-10">
-          <SectionHeading
-            centered={false}
-            badge="Official Range"
-            title="Featured Equipment Solutions"
-            subtitle="Explore high-demand commercial induction hobs, wok ranges, and holding cabinets."
-          />
+        <div className="bg-slate-900 text-white rounded-2xl p-8 sm:p-12 overflow-hidden relative shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            <div className="lg:col-span-7 space-y-4">
+              <span className="text-xs font-bold text-trinex-gold uppercase tracking-widest block">
+                Next-Gen Kitchen Technology
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">
+                Introducing Trinex Commercial Induction Equipment
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xl">
+                Engineered for maximum reliability, durability, and energy efficiency. Trinex commercial induction cooktops deliver fast heating, significantly lower ambient heat generation, and simple intuitive operation for high-volume commercial kitchens.
+              </p>
 
-          <div className="flex flex-wrap gap-2 text-xs font-bold">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`px-4 py-2 rounded-xs uppercase transition-all ${
-                activeTab === 'all'
-                  ? 'gold-gradient-bg text-trinex-dark font-extrabold'
-                  : 'bg-trinex-navy text-slate-300 border border-slate-800 hover:border-trinex-gold'
-              }`}
-            >
-              All Models
-            </button>
-            <button
-              onClick={() => setActiveTab('induction')}
-              className={`px-4 py-2 rounded-xs uppercase transition-all ${
-                activeTab === 'induction'
-                  ? 'gold-gradient-bg text-trinex-dark font-extrabold'
-                  : 'bg-trinex-navy text-slate-300 border border-slate-800 hover:border-trinex-gold'
-              }`}
-            >
-              Induction Range
-            </button>
-            <button
-              onClick={() => setActiveTab('holding-steamer')}
-              className={`px-4 py-2 rounded-xs uppercase transition-all ${
-                activeTab === 'holding-steamer'
-                  ? 'gold-gradient-bg text-trinex-dark font-extrabold'
-                  : 'bg-trinex-navy text-slate-300 border border-slate-800 hover:border-trinex-gold'
-              }`}
-            >
-              Steamer Cabinets
-            </button>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs">
+                <div className="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
+                  <Zap className="w-4 h-4 text-trinex-gold mb-1" />
+                  <span className="font-bold block text-white">Fast Heating</span>
+                  <span className="text-[10px] text-slate-400">Instant heat delivery</span>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
+                  <Leaf className="w-4 h-4 text-emerald-400 mb-1" />
+                  <span className="font-bold block text-white">Energy Efficient</span>
+                  <span className="text-[10px] text-slate-400">Direct magnetic transfer</span>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
+                  <Thermometer className="w-4 h-4 text-amber-400 mb-1" />
+                  <span className="font-bold block text-white">Lower Ambient Heat</span>
+                  <span className="text-[10px] text-slate-400">Cooler kitchen comfort</span>
+                </div>
+              </div>
+
+              <div className="pt-2 flex flex-wrap gap-3">
+                <Link
+                  to="/products?category=commercial-induction"
+                  className="px-6 py-3 rounded-lg bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider transition-colors inline-flex items-center gap-2"
+                >
+                  <span>Explore Induction Range</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <button
+                  onClick={handleHeroWhatsApp}
+                  className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-colors inline-flex items-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Inquire on WhatsApp</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="lg:col-span-5">
+              <div className="rounded-xl overflow-hidden bg-white p-4 shadow-lg border border-slate-700/60">
+                <img
+                  src="/assets/images/countertop_induction_hob.png"
+                  alt="Trinex Commercial Induction Cooktop"
+                  className="w-full h-auto object-contain max-h-[300px] mx-auto"
+                />
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ==================================================
+          6. WHY TRINEX (QUALITY • RELIABILITY • PERFORMANCE)
+          ================================================== */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-xs font-black uppercase tracking-widest text-trinex-red block">
+            The Trinex Commitment
+          </span>
+          <h2 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase tracking-tight">
+            Why Commercial Kitchens Trust Trinex
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600">
+            Backed by over 15 years of technical industry experience servicing commercial food establishments.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="p-6 rounded-xl border border-slate-200 bg-white hover:shadow-card transition-shadow space-y-3">
+            <ShieldCheck className="w-8 h-8 text-trinex-red" />
+            <h3 className="text-base font-bold text-slate-900">Commercial Durability</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Constructed from heavy-duty AISI food-grade stainless steel and industrial components designed for demanding kitchen use.
+            </p>
+          </div>
+
+          <div className="p-6 rounded-xl border border-slate-200 bg-white hover:shadow-card transition-shadow space-y-3">
+            <Zap className="w-8 h-8 text-amber-500" />
+            <h3 className="text-base font-bold text-slate-900">High Efficiency</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Instant heating response with advanced power modulation, minimizing energy waste and optimizing preparation speed.
+            </p>
+          </div>
+
+          <div className="p-6 rounded-xl border border-slate-200 bg-white hover:shadow-card transition-shadow space-y-3">
+            <Wrench className="w-8 h-8 text-trinex-red" />
+            <h3 className="text-base font-bold text-slate-900">Technical Service</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Experienced technical engineers delivering prompt installation, maintenance, and emergency breakdown support.
+            </p>
+          </div>
+
+          <div className="p-6 rounded-xl border border-slate-200 bg-white hover:shadow-card transition-shadow space-y-3">
+            <PackageCheck className="w-8 h-8 text-emerald-600" />
+            <h3 className="text-base font-bold text-slate-900">Genuine Spares</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Ready stock of critical spare parts for both domestic and imported commercial kitchen equipment to prevent downtime.
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onRequestPrice={(pName) => onOpenQuoteModal(pName)}
-            />
-          ))}
-        </div>
-
-        <div className="mt-8 sm:mt-10 text-center">
+        <div className="text-center pt-2">
           <Link
-            to="/products"
-            className="inline-flex items-center gap-2 gold-gradient-bg hover:gold-gradient-bg-hover text-trinex-dark font-extrabold text-xs px-7 py-3.5 sm:px-8 sm:py-3.5 rounded-xs uppercase tracking-widest shadow-lg transition-all"
+            to="/about"
+            className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-xs font-bold text-slate-800 transition-colors"
           >
-            <span>View Complete Product Catalog</span>
+            <span>Learn More About Trinex</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </section>
 
       {/* ==================================================
-          6. SERVICES SUMMARY SECTION
+          7. SALES • SERVICE • SPARES PILLARS SECTION
           ================================================== */}
-      <section className="bg-trinex-navy py-12 sm:py-16 lg:py-20 border-y border-trinex-gold/30 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="bg-slate-50/80 py-14 sm:py-18 border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           
-          <SectionHeading
-            badge="360° Support"
-            title="Complete Kitchen Equipment Support"
-            subtitle="Integrated commercial equipment sales, technical service engineering, and genuine spare parts support."
-          />
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <span className="text-xs font-black uppercase tracking-widest text-trinex-red block">
+              Core Pillars
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase tracking-tight">
+              Sales • Service • Spares
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600">
+              End-to-end commercial kitchen solutions from equipment purchase to long-term lifecycle support.
+            </p>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mt-8 sm:mt-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            <ServiceCard
-              number="01"
-              title="SALES"
-              subtitle="Professional Equipment Solutions"
-              description="Wide range of heavy-duty induction hobs, cooking ranges, refrigeration, and food steamer cabinets for commercial kitchens."
-              ctaText="Talk to Sales"
-              phone="9030847474"
-              icon="sales"
-            />
+            {/* Sales Card */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 hover:shadow-card transition-shadow">
+              <div className="w-12 h-12 rounded-lg bg-red-50 text-trinex-red flex items-center justify-center">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Equipment Sales</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Consultation and supply of commercial induction, heavy cooking ranges, refrigeration, and food preparation machinery.
+              </p>
+              <div className="pt-2">
+                <a href="tel:9030847474" className="text-xs font-bold text-trinex-red hover:underline flex items-center gap-1">
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Sales Helpline: 9030847474</span>
+                </a>
+              </div>
+            </div>
 
-            <ServiceCard
-              number="02"
-              title="SERVICE"
-              subtitle="Technical Maintenance & Repairs"
-              description="Reliable preventive maintenance, troubleshooting, and repair service by trained technical equipment technicians."
-              ctaText="Contact Service"
-              phone="9030467676"
-              icon="service"
-            />
+            {/* Service Card */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 hover:shadow-card transition-shadow">
+              <div className="w-12 h-12 rounded-lg bg-blue-50 text-slate-800 flex items-center justify-center">
+                <Wrench className="w-6 h-6 text-trinex-navy" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Technical Service</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                15+ years experience servicing Indian and imported commercial kitchen equipment with prompt on-site repairs.
+              </p>
+              <div className="pt-2">
+                <Link to="/services" className="text-xs font-bold text-trinex-red hover:underline flex items-center gap-1">
+                  <span>Service Request Form &rarr;</span>
+                </Link>
+              </div>
+            </div>
 
-            <ServiceCard
-              number="03"
-              title="SPARES"
-              subtitle="Genuine Spare Parts Assistance"
-              description="Replacement spare parts support including burner jets, thermostat sensors, compressors, door gaskets, and solenoids."
-              ctaText="Enquire for Spares"
-              icon="spares"
-              onAction={() => navigate('/spares')}
-            />
+            {/* Spares Card */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 hover:shadow-card transition-shadow">
+              <div className="w-12 h-12 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+                <PackageCheck className="w-6 h-6 text-trinex-gold" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Genuine Spares</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Procurement and supply of critical replacement parts, induction coils, glass plates, thermostat controls, and elements.
+              </p>
+              <div className="pt-2">
+                <Link to="/spares" className="text-xs font-bold text-trinex-red hover:underline flex items-center gap-1">
+                  <span>Browse Spare Parts &rarr;</span>
+                </Link>
+              </div>
+            </div>
 
+          </div>
+
+        </div>
+      </section>
+
+      {/* ==================================================
+          8. SERVICE / SPARES CTA
+          ================================================== */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-card">
+          <div className="space-y-2 text-center md:text-left">
+            <span className="text-xs font-bold text-trinex-red uppercase tracking-wider block">
+              Commercial Kitchen Support
+            </span>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900">
+              Experiencing Equipment Breakdowns or Need Spares?
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-xl">
+              Our service engineering team covers Telangana, Andhra Pradesh, and the Bengaluru region. Contact our technical helpline for immediate assistance.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <Link
+              to="/services"
+              className="w-full sm:w-auto px-6 py-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider text-center"
+            >
+              Request Service
+            </Link>
+            <Link
+              to="/spares"
+              className="w-full sm:w-auto px-6 py-3 rounded-lg bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider text-center"
+            >
+              Request Spare Part
+            </Link>
           </div>
         </div>
       </section>
 
       {/* ==================================================
-          7. SHOWROOM & GOOGLE MAP SECTION
+          9. CONTACT / QUOTE CTA
           ================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
-        <SectionHeading
-          badge="Physical Location"
-          title="Visit Our Hyderabad Showroom"
-          subtitle="Inspect commercial kitchen equipment solutions in person at our Ameerpet showroom."
-        />
+      <section className="bg-slate-50/80 py-14 sm:py-18 border-t border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 text-center space-y-6">
+          <div className="space-y-2">
+            <span className="text-xs font-black uppercase tracking-widest text-trinex-red block">
+              Ameerpet Showroom
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase tracking-tight">
+              Ready to Upgrade Your Commercial Kitchen?
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto">
+              Visit our Ameerpet showroom to inspect equipment or speak directly with our commercial specialists.
+            </p>
+          </div>
 
-        <div className="mt-8 sm:mt-10">
-          <GoogleMap />
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href="tel:9030847474"
+              className="w-full sm:w-auto px-7 py-3.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+            >
+              <Phone className="w-4 h-4 text-trinex-red" />
+              <span>Call Sales: 9030847474</span>
+            </a>
+
+            <button
+              onClick={() => onOpenQuoteModal()}
+              className="w-full sm:w-auto px-7 py-3.5 rounded-lg bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all"
+            >
+              Request Online Quote
+            </button>
+          </div>
         </div>
       </section>
 

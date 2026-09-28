@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Send, CheckCircle2, ShieldCheck, PhoneCall, Building2, User, Mail, MessageSquare } from 'lucide-react';
+import { X, CheckCircle2, Phone, MessageCircle, Send } from 'lucide-react';
+import { enquiryStore } from '../services/enquiryStore';
 
 interface QuoteModalProps {
   isOpen: boolean;
@@ -13,280 +14,226 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
   productContext,
 }) => {
   const [formData, setFormData] = useState({
-    fullName: '',
-    companyName: '',
+    name: '',
     phone: '',
-    email: '',
-    requirementType: 'Sales Inquiry',
-    preferredContact: 'Call',
-    message: '',
+    company: '',
+    city: 'Hyderabad',
+    requirements: '',
   });
 
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
-    if (productContext) {
-      setFormData(prev => ({
-        ...prev,
-        message: `I am interested in receiving technical details and commercial pricing for: ${productContext}.`
-      }));
+    if (isOpen) {
+      setSubmitted(false);
+      setFormData({
+        name: '',
+        phone: '',
+        company: '',
+        city: 'Hyderabad',
+        requirements: productContext ? `Inquiry regarding: ${productContext}` : '',
+      });
     }
-  }, [productContext]);
+  }, [isOpen, productContext]);
 
   if (!isOpen) return null;
 
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
-    if (!formData.companyName.trim()) newErrors.companyName = 'Company / Restaurant name is required';
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^[0-9+\s-]{10,15}$/.test(formData.phone.trim())) {
-      newErrors.phone = 'Please enter a valid phone number';
-    }
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email address is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
-
     setLoading(true);
-    // Simulate professional B2B form submission dispatch
+
+    // Record into enquiry store
+    enquiryStore.addEnquiry({
+      name: formData.name,
+      phone: formData.phone,
+      company: formData.company,
+      city: formData.city,
+      productName: productContext || 'General Equipment Inquiry',
+      message: formData.requirements,
+    });
+
     setTimeout(() => {
       setLoading(false);
       setSubmitted(true);
-    }, 800);
+    }, 400);
   };
 
-  const handleReset = () => {
-    setSubmitted(false);
-    setFormData({
-      fullName: '',
-      companyName: '',
-      phone: '',
-      email: '',
-      requirementType: 'Sales Inquiry',
-      preferredContact: 'Call',
-      message: '',
-    });
+  const handleWhatsAppRedirect = () => {
+    const text = encodeURIComponent(
+      `Hello Trinex Equipment,\n\nName: ${formData.name}\nPhone: ${formData.phone}\nCompany: ${formData.company || 'N/A'}\nCity: ${formData.city}\nRequirements: ${formData.requirements || productContext || 'Request for quote'}\n\nPlease share official pricing and technical details.`
+    );
+    window.open(`https://wa.me/919030847474?text=${text}`, '_blank');
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div 
-        className="bg-trinex-dark border border-trinex-gold/40 rounded-sm shadow-card-dark w-full max-w-xl overflow-hidden relative"
+        className="relative bg-white w-full max-w-lg rounded-lg shadow-2xl border border-trinex-border overflow-hidden animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Gold Accent Bar */}
-        <div className="h-1.5 w-full gold-gradient-bg" />
-
         {/* Header */}
-        <div className="px-6 pt-5 pb-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="bg-trinex-black px-6 py-4 flex items-center justify-between text-white">
           <div>
-            <div className="flex items-center gap-2 text-trinex-gold text-xs font-bold uppercase tracking-widest">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Trinex Commercial B2B Inquiry</span>
-            </div>
-            <h3 className="text-xl font-extrabold text-white tracking-tight mt-0.5">
-              {productContext ? `Quote for: ${productContext}` : 'Request a Commercial Quote'}
-            </h3>
+            <span className="text-[10px] font-bold text-trinex-red uppercase tracking-wider block">
+              Trinex Equipment Pvt Ltd
+            </span>
+            <h3 className="text-lg font-bold">Request Equipment Quote</h3>
           </div>
-          <button
+          <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-trinex-gold hover:bg-trinex-navy rounded transition-colors"
-            aria-label="Close modal"
+            className="p-1 rounded text-gray-400 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content Body */}
+        {/* Body */}
         <div className="p-6">
           {submitted ? (
-            <div className="py-8 text-center space-y-4">
-              <div className="w-16 h-16 bg-trinex-gold/20 border-2 border-trinex-gold text-trinex-gold rounded-full flex items-center justify-center mx-auto animate-bounce">
-                <CheckCircle2 className="w-10 h-10" />
+            <div className="text-center py-6 space-y-4">
+              <div className="w-14 h-14 bg-red-50 text-trinex-red rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h4 className="text-2xl font-extrabold text-white">Requirement Received!</h4>
-              <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
-                Thank you for contacting <strong className="text-trinex-gold">Trinex Equipment Pvt Ltd</strong>. Our commercial sales engineering team will review your specifications and get in touch via <strong className="text-white">{formData.preferredContact}</strong> shortly.
+              <h4 className="text-xl font-bold text-trinex-black">
+                Quote Request Received!
+              </h4>
+              <p className="text-sm text-gray-600 max-w-sm mx-auto">
+                Thank you, <strong className="text-trinex-black">{formData.name}</strong>. Our sales team will contact you shortly with availability and pricing.
               </p>
-              <div className="pt-4 border-t border-slate-800 flex items-center justify-center gap-4 text-xs">
-                <span className="text-slate-400">Sales Helpline: 9030847474</span>
-                <span>•</span>
-                <span className="text-slate-400">Service: 9030467676</span>
+
+              <div className="pt-4 flex flex-col gap-2">
+                <button
+                  onClick={handleWhatsAppRedirect}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-xs transition-all"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Instant Follow-up on WhatsApp</span>
+                </button>
+
+                <button
+                  onClick={onClose}
+                  className="w-full py-2.5 px-4 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition-colors"
+                >
+                  Close Window
+                </button>
               </div>
-              <button
-                onClick={handleReset}
-                className="mt-6 gold-gradient-bg text-trinex-dark font-extrabold text-xs px-8 py-3 rounded uppercase tracking-wider shadow-lg"
-              >
-                Close & Return
-              </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              
-              {/* Row 1: Full Name & Company Name */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {productContext && (
+                <div className="p-3 rounded bg-red-50 border border-red-100 text-xs">
+                  <span className="font-bold text-trinex-red uppercase tracking-wider block mb-0.5">Selected Equipment</span>
+                  <span className="font-bold text-trinex-black">{productContext}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-300 font-bold mb-1.5 uppercase tracking-wider">
-                    Full Name <span className="text-trinex-gold">*</span>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Your Name <span className="text-trinex-red">*</span>
                   </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      placeholder="e.g. Rajesh Kumar"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      className={`w-full pl-9 pr-3 py-2.5 bg-trinex-navy border rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:border-trinex-gold ${
-                        errors.fullName ? 'border-red-500' : 'border-slate-700'
-                      }`}
-                    />
-                  </div>
-                  {errors.fullName && <p className="text-red-400 text-[10px] mt-1">{errors.fullName}</p>}
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Enter your name"
+                    className="w-full px-3 py-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-bold mb-1.5 uppercase tracking-wider">
-                    Company / Restaurant <span className="text-trinex-gold">*</span>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Mobile Number <span className="text-trinex-red">*</span>
                   </label>
-                  <div className="relative">
-                    <Building2 className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      placeholder="e.g. Royal Kitchens & Cafe"
-                      value={formData.companyName}
-                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                      className={`w-full pl-9 pr-3 py-2.5 bg-trinex-navy border rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:border-trinex-gold ${
-                        errors.companyName ? 'border-red-500' : 'border-slate-700'
-                      }`}
-                    />
-                  </div>
-                  {errors.companyName && <p className="text-red-400 text-[10px] mt-1">{errors.companyName}</p>}
-                </div>
-              </div>
-
-              {/* Row 2: Phone & Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1.5 uppercase tracking-wider">
-                    Phone Number <span className="text-trinex-gold">*</span>
-                  </label>
-                  <div className="relative">
-                    <PhoneCall className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                    <input
-                      type="tel"
-                      placeholder="e.g. 9876543210"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className={`w-full pl-9 pr-3 py-2.5 bg-trinex-navy border rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:border-trinex-gold ${
-                        errors.phone ? 'border-red-500' : 'border-slate-700'
-                      }`}
-                    />
-                  </div>
-                  {errors.phone && <p className="text-red-400 text-[10px] mt-1">{errors.phone}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1.5 uppercase tracking-wider">
-                    Email Address <span className="text-trinex-gold">*</span>
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                    <input
-                      type="email"
-                      placeholder="name@company.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className={`w-full pl-9 pr-3 py-2.5 bg-trinex-navy border rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:border-trinex-gold ${
-                        errors.email ? 'border-red-500' : 'border-slate-700'
-                      }`}
-                    />
-                  </div>
-                  {errors.email && <p className="text-red-400 text-[10px] mt-1">{errors.email}</p>}
-                </div>
-              </div>
-
-              {/* Row 3: Requirement Type & Preferred Contact */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1.5 uppercase tracking-wider">
-                    Requirement Category
-                  </label>
-                  <select
-                    value={formData.requirementType}
-                    onChange={(e) => setFormData({ ...formData, requirementType: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-trinex-navy border border-slate-700 rounded text-slate-100 focus:outline-none focus:border-trinex-gold"
-                  >
-                    <option value="Sales Inquiry">Equipment Sales Purchase</option>
-                    <option value="Service & Repairs">Technical Service & Repair</option>
-                    <option value="Spare Parts">Spare Parts Order</option>
-                    <option value="Complete Kitchen Setup">Turnkey Commercial Kitchen Setup</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1.5 uppercase tracking-wider">
-                    Preferred Contact Method
-                  </label>
-                  <select
-                    value={formData.preferredContact}
-                    onChange={(e) => setFormData({ ...formData, preferredContact: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-trinex-navy border border-slate-700 rounded text-slate-100 focus:outline-none focus:border-trinex-gold"
-                  >
-                    <option value="Call">Phone Call</option>
-                    <option value="WhatsApp">WhatsApp</option>
-                    <option value="Email">Email</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Row 4: Message */}
-              <div>
-                <label className="block text-slate-300 font-bold mb-1.5 uppercase tracking-wider">
-                  Requirement Details / Message
-                </label>
-                <div className="relative">
-                  <MessageSquare className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                  <textarea
-                    rows={3}
-                    placeholder="Describe your kitchen equipment requirement, capacity needed, or timeline..."
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full pl-9 pr-3 py-2.5 bg-trinex-navy border border-slate-700 rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:border-trinex-gold"
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    pattern="[0-9]{10}"
+                    title="Please enter a valid 10-digit mobile number"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="10-digit phone"
+                    className="w-full px-3 py-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
                   />
                 </div>
               </div>
 
-              {/* Submit CTA */}
-              <div className="pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Business / Hotel Name
+                  </label>
+                  <input
+                    type="text"
+                    name="company"
+                    value={formData.company}
+                    onChange={handleChange}
+                    placeholder="Restaurant, Hotel, Cloud Kitchen"
+                    className="w-full px-3 py-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    City / Location
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    placeholder="Hyderabad, Secunderabad, etc."
+                    className="w-full px-3 py-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Equipment Requirements / Message
+                </label>
+                <textarea
+                  name="requirements"
+                  rows={3}
+                  value={formData.requirements}
+                  onChange={handleChange}
+                  placeholder="Tell us what equipment capacity or specifications you need..."
+                  className="w-full px-3 py-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red resize-none"
+                />
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full gold-gradient-bg hover:gold-gradient-bg-hover text-trinex-dark font-extrabold text-sm py-3.5 rounded uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  className="w-full sm:flex-1 py-3 px-4 rounded bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
                 >
-                  {loading ? (
-                    <span>Processing Submission...</span>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      <span>Submit Requirement Quote</span>
-                    </>
-                  )}
+                  <Send className="w-4 h-4" />
+                  <span>{loading ? 'Submitting...' : 'Submit Quote Request'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleWhatsAppRedirect}
+                  className="w-full sm:w-auto py-3 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WhatsApp</span>
                 </button>
               </div>
 
+              <div className="pt-2 text-center text-xs text-gray-400">
+                Direct Sales: <a href="tel:9030847474" className="text-trinex-red font-bold hover:underline">9030847474</a>
+              </div>
             </form>
           )}
         </div>

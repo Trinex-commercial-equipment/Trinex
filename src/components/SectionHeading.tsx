@@ -14,38 +14,24 @@ export const SectionHeading: React.FC<SectionHeadingProps> = ({
   title,
   subtitle,
   centered = true,
-  light = false,
   className = "",
 }) => {
   return (
-    <div className={`space-y-3 ${centered ? 'text-center max-w-3xl mx-auto' : 'text-left'} ${className}`}>
+    <div className={`space-y-2 ${centered ? 'text-center max-w-3xl mx-auto' : 'text-left'} ${className}`}>
       {badge && (
-        <div className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-sm text-xs font-extrabold uppercase tracking-widest ${
-          light 
-            ? 'bg-trinex-gold/20 text-trinex-gold border border-trinex-gold/30' 
-            : 'gold-badge'
-        }`}>
-          <span className="w-1.5 h-1.5 rounded-full bg-trinex-gold animate-pulse"></span>
-          {badge}
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-red-50 border border-red-100 text-trinex-red text-xs font-black uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-trinex-red animate-pulse" />
+          <span>{badge}</span>
         </div>
       )}
-      <h2 className={`text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight ${
-        light ? 'text-trinex-dark' : 'text-white'
-      }`}>
+      <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-trinex-black uppercase tracking-tight font-display">
         {title}
       </h2>
       {subtitle && (
-        <p className={`text-sm sm:text-base leading-relaxed ${
-          light ? 'text-slate-600' : 'text-slate-400'
-        }`}>
+        <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-normal">
           {subtitle}
         </p>
       )}
-      <div className={`pt-2 flex items-center gap-1.5 ${centered ? 'justify-center' : 'justify-start'}`}>
-        <span className="h-0.5 w-12 bg-trinex-gold"></span>
-        <span className="h-1.5 w-1.5 rounded-full bg-trinex-gold"></span>
-        <span className="h-0.5 w-6 bg-trinex-gold/40"></span>
-      </div>
     </div>
   );
 };
