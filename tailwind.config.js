@@ -8,34 +8,47 @@ export default {
     extend: {
       colors: {
         trinex: {
-          dark: "#07131C",
-          navy: "#0D1B24",
-          slate: "#152430",
-          card: "#11222E",
+          // Refined Industrial Crimson (Sophisticated, authoritative B2B red)
+          red: "#B91C1C",
+          "red-dark": "#991B1B",
+          "red-light": "#FEF2F2",
+          "red-muted": "#DC2626",
+          
+          // Deep Slate Navy & Charcoal (Corporate, matches official Trinex logo)
+          navy: "#0F172A",
+          "navy-dark": "#0B1120",
+          "navy-light": "#1E293B",
+          black: "#0F172A",
+          dark: "#0F172A",
+          
+          // Typography & Grayscale
+          gray: "#334155",
+          "gray-muted": "#64748B",
+          "light-gray": "#F8FAFC",
+          surface: "#F1F5F9",
+          border: "#E2E8F0",
+          "border-dark": "#CBD5E1",
+          
+          // Warm Gold / Amber Accent (from Trinex official emblem)
           gold: "#C8922E",
-          "gold-light": "#E5B84B",
-          "gold-dark": "#A87620",
-          "gold-hover": "#D99D36",
-          silver: "#B8BEC5",
-          gray: "#F3F4F6",
-          "light-bg": "#FAFAFC",
+          "gold-light": "#F59E0B",
+          "gold-dark": "#92400E",
+          
+          // Polished Business WhatsApp Green
+          whatsapp: "#128C7E",
+          "whatsapp-hover": "#075E54",
         },
       },
       fontFamily: {
-        sans: ['Inter', 'Montserrat', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         display: ['Montserrat', 'Inter', 'sans-serif'],
       },
       boxShadow: {
-        'gold-glow': '0 0 20px rgba(200, 146, 46, 0.25)',
-        'premium': '0 10px 30px -5px rgba(7, 19, 28, 0.15)',
-        'card-dark': '0 8px 25px rgba(0, 0, 0, 0.4)',
+        'subtle': '0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.06)',
+        'card': '0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.04)',
+        'card-hover': '0 12px 28px -4px rgba(15, 23, 42, 0.1), 0 4px 12px -2px rgba(15, 23, 42, 0.06)',
+        'red-glow': '0 4px 16px rgba(185, 28, 28, 0.25)',
       },
-      backgroundImage: {
-        'gold-gradient': 'linear-gradient(135deg, #E5B84B 0%, #C8922E 100%)',
-        'gold-metallic': 'linear-gradient(135deg, #F0CA65 0%, #C8922E 50%, #9B6E1C 100%)',
-        'navy-gradient': 'linear-gradient(180deg, #07131C 0%, #0D1B24 100%)',
-        'navy-radial': 'radial-gradient(circle at top right, #152A38 0%, #07131C 70%)',
-      }
     },
   },
   plugins: [],
