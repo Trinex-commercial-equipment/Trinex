@@ -1,4 +1,13 @@
 import { Product, Category } from '../types/product';
+import {
+  getSupabase,
+  isSupabaseConfigured,
+  mapRowToProduct,
+  mapProductToRow,
+  mapRowToCategory,
+  mapCategoryToRow,
+  logSupabaseError
+} from './supabaseClient';
 
 export const INITIAL_CATEGORIES: Category[] = [
   {
@@ -67,7 +76,6 @@ export const INITIAL_CATEGORIES: Category[] = [
   }
 ];
 
-// EXACTLY ONE realistic demo product as specified in Rule 30
 export const INITIAL_PRODUCTS: Product[] = [
   {
     id: 'prod-demo-1',
@@ -135,9 +143,6 @@ export const INITIAL_PRODUCTS: Product[] = [
   }
 ];
 
-const PRODUCTS_STORAGE_KEY = 'trinex_products_v3';
-const CATEGORIES_STORAGE_KEY = 'trinex_categories_v3';
-
 export const slugify = (text: string): string => {
   return text
     .toString()
@@ -149,54 +154,81 @@ export const slugify = (text: string): string => {
 };
 
 class ProductStoreService {
-  private products: Product[] = [];
-  private categories: Category[] = [];
+  private products: Product[] = INITIAL_PRODUCTS;
+  private categories: Category[] = INITIAL_CATEGORIES;
   private listeners: Array<() => void> = [];
+  private isInitialized = false;
+  private realtimeChannel: any = null;
 
   constructor() {
+    this.cleanupLegacyStorage();
     this.init();
   }
 
-  private init() {
+  /**
+   * Cleans up legacy local storage keys so old browser data is not used
+   */
+  private cleanupLegacyStorage() {
     try {
-      const storedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-      if (storedCategories) {
-        this.categories = JSON.parse(storedCategories);
-      } else {
-        this.categories = INITIAL_CATEGORIES;
-        this.saveCategories();
-      }
-
-      const storedProducts = localStorage.getItem(PRODUCTS_STORAGE_KEY);
-      if (storedProducts) {
-        this.products = JSON.parse(storedProducts);
-      } else {
-        this.products = INITIAL_PRODUCTS;
-        this.saveProducts();
-      }
-    } catch (e) {
-      console.warn('LocalStorage unavailable or corrupt, using memory store', e);
-      this.categories = INITIAL_CATEGORIES;
-      this.products = INITIAL_PRODUCTS;
+      localStorage.removeItem('trinex_products_v3');
+      localStorage.removeItem('trinex_categories_v3');
+    } catch {
+      // Ignore if localStorage unavailable
     }
   }
 
-  private saveProducts() {
-    try {
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(this.products));
-    } catch (e) {
-      console.error('Failed to save products to localStorage', e);
-    }
-    this.notify();
+  /**
+   * Initialize directly from Supabase and subscribe to realtime events
+   */
+  private async init() {
+    if (this.isInitialized) return;
+    this.isInitialized = true;
+
+    await Promise.all([
+      this.fetchCategories(),
+      this.fetchProducts(),
+    ]);
+
+    this.setupRealtimeSubscription();
   }
 
-  private saveCategories() {
+  /**
+   * Sets up Supabase Realtime so multi-tab or external DB changes sync live
+   */
+  private setupRealtimeSubscription() {
+    const supabase = getSupabase();
+    if (!supabase) return;
     try {
-      localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(this.categories));
-    } catch (e) {
-      console.error('Failed to save categories to localStorage', e);
+      if (this.realtimeChannel) {
+        supabase.removeChannel(this.realtimeChannel);
+      }
+
+      this.realtimeChannel = supabase
+        .channel('trinex_products_realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'products' },
+          () => {
+            console.log('⚡ [Supabase Realtime] Detected change in "products" table, refreshing...');
+            this.fetchProducts();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'categories' },
+          () => {
+            console.log('⚡ [Supabase Realtime] Detected change in "categories" table, refreshing...');
+            this.fetchCategories();
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('🔌 [Supabase Realtime] Subscribed to live product/category updates.');
+          }
+        });
+    } catch (err) {
+      console.warn('Realtime subscription not supported or failed to connect:', err);
     }
-    this.notify();
   }
 
   public subscribe(listener: () => void): () => void {
@@ -216,7 +248,132 @@ class ProductStoreService {
     });
   }
 
-  // Categories CRUD
+  // ====================================================
+  // SUPABASE DIRECT READ & SEED METHODS
+  // ====================================================
+
+  public async fetchCategories(): Promise<Category[]> {
+    const supabase = getSupabase();
+    if (!supabase) {
+      return this.categories;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (error) {
+        const diagnosed = logSupabaseError('fetchCategories()', error);
+        console.warn(`[Supabase Store] Using default categories cache (${diagnosed.actionableHint})`);
+        return this.categories;
+      }
+
+      if (data && data.length > 0) {
+        this.categories = data.map(mapRowToCategory);
+        console.log(`✅ [Supabase:ProductStore] Loaded ${data.length} categories from Supabase.`);
+        this.notify();
+      } else if (data && data.length === 0) {
+        console.log('[Supabase:ProductStore] "categories" table is empty. Seeding initial categories...');
+        await this.seedCategoriesToSupabase();
+      }
+    } catch (err) {
+      logSupabaseError('fetchCategories() exception', err);
+    }
+
+    return this.categories;
+  }
+
+  private async seedCategoriesToSupabase() {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    try {
+      const rows = INITIAL_CATEGORIES.map(mapCategoryToRow);
+      const { error } = await supabase.from('categories').insert(rows);
+      if (error) {
+        logSupabaseError('seedCategoriesToSupabase()', error, rows);
+      } else {
+        console.log(`✅ [Supabase:ProductStore] Seeded ${rows.length} default categories into Supabase.`);
+        const { data } = await supabase
+          .from('categories')
+          .select('*')
+          .order('display_order', { ascending: true });
+        if (data) {
+          this.categories = data.map(mapRowToCategory);
+          this.notify();
+        }
+      }
+    } catch (e) {
+      logSupabaseError('seedCategoriesToSupabase() exception', e);
+    }
+  }
+
+  public async fetchProducts(): Promise<Product[]> {
+    const supabase = getSupabase();
+    if (!supabase) {
+      return this.products;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        const diagnosed = logSupabaseError('fetchProducts()', error);
+        console.warn(`[Supabase Store] Using default products cache (${diagnosed.actionableHint})`);
+        return this.products;
+      }
+
+      if (data && data.length > 0) {
+        this.products = data.map(mapRowToProduct);
+        console.log(`✅ [Supabase:ProductStore] Loaded ${data.length} products from Supabase.`);
+        this.notify();
+      } else if (data && data.length === 0) {
+        console.log('[Supabase:ProductStore] "products" table is empty. Seeding initial demo product...');
+        await this.seedProductsToSupabase();
+      }
+    } catch (err) {
+      logSupabaseError('fetchProducts() exception', err);
+    }
+
+    return this.products;
+  }
+
+  private async seedProductsToSupabase() {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    try {
+      const rows = INITIAL_PRODUCTS.map(mapProductToRow);
+      const { error } = await supabase.from('products').insert(rows);
+      if (error) {
+        logSupabaseError('seedProductsToSupabase()', error, rows);
+      } else {
+        console.log(`✅ [Supabase:ProductStore] Seeded demo product into Supabase.`);
+        const { data } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (data) {
+          this.products = data.map(mapRowToProduct);
+          this.notify();
+        }
+      }
+    } catch (e) {
+      logSupabaseError('seedProductsToSupabase() exception', e);
+    }
+  }
+
+  public async refresh(): Promise<void> {
+    await Promise.all([this.fetchCategories(), this.fetchProducts()]);
+  }
+
+  // ====================================================
+  // CATEGORIES CRUD (DIRECT TO SUPABASE)
+  // ====================================================
+
   public getCategories(): Category[] {
     return [...this.categories].sort((a, b) => (a.displayOrder || 99) - (b.displayOrder || 99));
   }
@@ -225,36 +382,86 @@ class ProductStoreService {
     return this.categories.find((c) => c.slug === slug);
   }
 
-  public addCategory(cat: Omit<Category, 'id'>): Category {
+  public async addCategory(cat: Omit<Category, 'id'>): Promise<Category> {
     const newCategory: Category = {
       ...cat,
       id: `cat-${Date.now()}`,
       slug: cat.slug || slugify(cat.name),
     };
-    this.categories.push(newCategory);
-    this.saveCategories();
-    return newCategory;
+
+    const supabase = getSupabase();
+    if (supabase) {
+      const row = mapCategoryToRow(newCategory);
+      const { data, error } = await supabase.from('categories').insert([row]).select().single();
+      if (error) {
+        const diagnosed = logSupabaseError(`addCategory("${newCategory.name}")`, error, row);
+        throw new Error(`${diagnosed.message} — ${diagnosed.actionableHint}`);
+      }
+      const saved = mapRowToCategory(data);
+      console.log(`✅ [Supabase:ProductStore] Successfully created category "${saved.name}" (ID: ${saved.id}) in Supabase.`);
+      this.categories.push(saved);
+      this.notify();
+      return saved;
+    } else {
+      this.categories.push(newCategory);
+      this.notify();
+      return newCategory;
+    }
   }
 
-  public updateCategory(id: string, updates: Partial<Category>): Category | null {
+  public async updateCategory(id: string, updates: Partial<Category>): Promise<Category | null> {
     const idx = this.categories.findIndex((c) => c.id === id);
     if (idx === -1) return null;
-    this.categories[idx] = { ...this.categories[idx], ...updates };
-    this.saveCategories();
-    return this.categories[idx];
+
+    const supabase = getSupabase();
+    if (supabase) {
+      const row = mapCategoryToRow(updates);
+      const { data, error } = await supabase
+        .from('categories')
+        .update(row)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) {
+        const diagnosed = logSupabaseError(`updateCategory(ID: "${id}")`, error, row);
+        throw new Error(`${diagnosed.message} — ${diagnosed.actionableHint}`);
+      }
+      const updated = mapRowToCategory(data);
+      console.log(`✅ [Supabase:ProductStore] Successfully updated category "${updated.name}" (ID: ${id}) in Supabase.`);
+      this.categories[idx] = updated;
+      this.notify();
+      return updated;
+    } else {
+      this.categories[idx] = { ...this.categories[idx], ...updates };
+      this.notify();
+      return this.categories[idx];
+    }
   }
 
-  public deleteCategory(id: string): boolean {
+  public async deleteCategory(id: string): Promise<boolean> {
+    const supabase = getSupabase();
+    if (supabase) {
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) {
+        const diagnosed = logSupabaseError(`deleteCategory(ID: "${id}")`, error);
+        throw new Error(`${diagnosed.message} — ${diagnosed.actionableHint}`);
+      }
+      console.log(`✅ [Supabase:ProductStore] Successfully deleted category (ID: ${id}) from Supabase.`);
+    }
+
     const initialLen = this.categories.length;
     this.categories = this.categories.filter((c) => c.id !== id);
     if (this.categories.length !== initialLen) {
-      this.saveCategories();
+      this.notify();
       return true;
     }
     return false;
   }
 
-  // Products CRUD
+  // ====================================================
+  // PRODUCTS CRUD (DIRECT TO SUPABASE)
+  // ====================================================
+
   public getAllProducts(includeDrafts = false): Product[] {
     if (includeDrafts) return [...this.products];
     return this.products.filter((p) => p.status === 'active');
@@ -282,7 +489,7 @@ class ProductStoreService {
     );
   }
 
-  public addProduct(productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Product {
+  public async addProduct(productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product> {
     const autoSlug = productData.slug ? slugify(productData.slug) : slugify(`${productData.name} ${productData.model}`);
     
     // Ensure slug uniqueness
@@ -292,20 +499,42 @@ class ProductStoreService {
       finalSlug = `${autoSlug}-${counter++}`;
     }
 
+    const now = new Date().toISOString();
     const newProduct: Product = {
       ...productData,
       id: `prod-${Date.now()}`,
       slug: finalSlug,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
 
-    this.products.unshift(newProduct);
-    this.saveProducts();
-    return newProduct;
+    const supabase = getSupabase();
+    if (supabase) {
+      const row = mapProductToRow(newProduct);
+      console.log(`📤 [Supabase:ProductStore] Sending INSERT for product "${newProduct.name}"...`, row);
+
+      const { data, error } = await supabase.from('products').insert([row]).select().single();
+      if (error) {
+        const diagnosed = logSupabaseError(`addProduct("${newProduct.name}")`, error, row);
+        throw new Error(`${diagnosed.message} — ${diagnosed.actionableHint}`);
+      }
+
+      const saved = mapRowToProduct(data);
+      console.log(`✅ [Supabase:ProductStore] Successfully inserted product "${saved.name}" (ID: ${saved.id}) in Supabase.`);
+      this.products.unshift(saved);
+      this.notify();
+      return saved;
+    } else {
+      console.log(supabase)
+      console.warn('⚠️ [Supabase:ProductStore] Supabase is not configured. Saving in-memory only.');
+      this.products.unshift(newProduct);
+
+      this.notify();
+      return newProduct;
+    }
   }
 
-  public updateProduct(id: string, updates: Partial<Product>): Product | null {
+  public async updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
     const idx = this.products.findIndex((p) => p.id === id);
     if (idx === -1) return null;
 
@@ -313,31 +542,79 @@ class ProductStoreService {
       updates.slug = slugify(`${updates.name} ${updates.model || ''}`);
     }
 
-    this.products[idx] = {
-      ...this.products[idx],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
+    updates.updatedAt = new Date().toISOString();
 
-    this.saveProducts();
-    return this.products[idx];
+    const supabase = getSupabase();
+    if (supabase) {
+      const row = mapProductToRow(updates);
+      console.log(`📤 [Supabase:ProductStore] Sending UPDATE for product (ID: ${id})...`, row);
+
+      const { data, error } = await supabase
+        .from('products')
+        .update(row)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        const diagnosed = logSupabaseError(`updateProduct(ID: "${id}")`, error, row);
+        throw new Error(`${diagnosed.message} — ${diagnosed.actionableHint}`);
+      }
+
+      const updated = mapRowToProduct(data);
+      console.log(`✅ [Supabase:ProductStore] Successfully updated product "${updated.name}" (ID: ${id}) in Supabase.`);
+      this.products[idx] = updated;
+      this.notify();
+      return updated;
+    } else {
+      console.warn('⚠️ [Supabase:ProductStore] Supabase is not configured. Updating in-memory only.');
+      this.products[idx] = {
+        ...this.products[idx],
+        ...updates,
+      };
+      this.notify();
+      return this.products[idx];
+    }
   }
 
-  public deleteProduct(id: string): boolean {
+  public async deleteProduct(id: string): Promise<boolean> {
+    const supabase = getSupabase();
+    if (supabase) {
+      console.log(`📤 [Supabase:ProductStore] Sending DELETE for product (ID: ${id})...`);
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) {
+        const diagnosed = logSupabaseError(`deleteProduct(ID: "${id}")`, error);
+        throw new Error(`${diagnosed.message} — ${diagnosed.actionableHint}`);
+      }
+      console.log(`✅ [Supabase:ProductStore] Successfully deleted product (ID: ${id}) from Supabase.`);
+    }
+
     const initialLen = this.products.length;
     this.products = this.products.filter((p) => p.id !== id);
     if (this.products.length !== initialLen) {
-      this.saveProducts();
+      this.notify();
       return true;
     }
     return false;
   }
 
-  public resetToDefault() {
+  public async resetToDefault(): Promise<void> {
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        console.log('📤 [Supabase:ProductStore] Resetting products catalog in Supabase...');
+        await supabase.from('products').delete().neq('id', '___empty___');
+        const rows = INITIAL_PRODUCTS.map(mapProductToRow);
+        await supabase.from('products').insert(rows);
+        console.log('✅ [Supabase:ProductStore] Catalog reset completed in Supabase.');
+      } catch (err) {
+        logSupabaseError('resetToDefault()', err);
+      }
+    }
+
     this.categories = INITIAL_CATEGORIES;
     this.products = INITIAL_PRODUCTS;
-    this.saveCategories();
-    this.saveProducts();
+    this.notify();
   }
 
   // Product Search

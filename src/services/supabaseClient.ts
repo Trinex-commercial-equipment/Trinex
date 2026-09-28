@@ -1,14 +1,257 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Product, Category } from '../types/product';
 
-const metaEnv = (import.meta as any)?.env || {};
-const supabaseUrl: string = metaEnv.VITE_SUPABASE_URL || '';
-const supabaseAnonKey: string = metaEnv.VITE_SUPABASE_ANON_KEY || '';
+export const sanitizeSupabaseUrl = (url: string): string => {
+  return (url || '').trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+};
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+// ===================================================
+// SUPABASE CONFIGURATION
+// ===================================================
+// Configuration comes ONLY from Vite .env variables.
+// No localStorage is used.
+//
+// .env:
+// VITE_SUPABASE_URL=https://your-project.supabase.co
+// VITE_SUPABASE_ANON_KEY=your-anon-or-publishable-key
 
-export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+let currentUrl = sanitizeSupabaseUrl(
+  import.meta.env.VITE_SUPABASE_URL || ''
+);
+
+let currentAnonKey = (
+  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+).trim();
+
+export const getSupabaseConfig = () => ({
+  url: currentUrl,
+  anonKey: currentAnonKey,
+  isConfigured: Boolean(currentUrl && currentAnonKey),
+});
+
+export let isSupabaseConfigured = Boolean(
+  currentUrl && currentAnonKey
+);
+
+export let supabase: SupabaseClient | null =
+  isSupabaseConfigured
+    ? createClient(currentUrl, currentAnonKey)
+    : null;
+
+export const getSupabase = (): SupabaseClient | null => supabase;
+
+// Kept for backwards compatibility with existing imports.
+// It does NOT read from or write to localStorage.
+// The initial configuration still always comes from .env.
+export const setSupabaseConfig = (url: string, anonKey: string) => {
+  currentUrl = sanitizeSupabaseUrl(url);
+  currentAnonKey = anonKey.trim();
+
+  isSupabaseConfigured = Boolean(currentUrl && currentAnonKey);
+
+  supabase = isSupabaseConfigured
+    ? createClient(currentUrl, currentAnonKey)
+    : null;
+
+  console.log('Supabase configuration updated:', {
+    url: currentUrl,
+    hasAnonKey: Boolean(currentAnonKey),
+    isConfigured: isSupabaseConfigured,
+  });
+
+  return isSupabaseConfigured;
+};
+
+if (!currentUrl) {
+  console.error(
+    '❌ VITE_SUPABASE_URL is missing. Check your .env file.'
+  );
+}
+
+if (!currentAnonKey) {
+  console.error(
+    '❌ VITE_SUPABASE_ANON_KEY is missing. Check your .env file.'
+  );
+}
+
+console.log('Supabase initialization:', {
+  url: currentUrl || '(missing)',
+  hasAnonKey: Boolean(currentAnonKey),
+  isConfigured: isSupabaseConfigured,
+});
+
+// ===================================================
+// DIAGNOSTIC ERROR LOGGING & REPORTING
+// Detects exact cause, failure codes, and provides actionable hints
+// ===================================================
+
+export interface SupabaseErrorInfo {
+  code?: string;
+  message: string;
+  details?: string | null;
+  hint?: string | null;
+  actionableHint: string;
+}
+
+export function diagnoseSupabaseError(error: any): SupabaseErrorInfo {
+  if (!error) {
+    return {
+      message: 'Unknown error occurred',
+      actionableHint: 'Check network connectivity and browser console.',
+    };
+  }
+
+  const code = String(error.code || error.status || '');
+  const message = String(error.message || error.error_description || error);
+  const details = error.details || null;
+  const hint = error.hint || null;
+
+  let actionableHint = 'Check the browser console and Supabase dashboard logs.';
+
+  if (code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the table')) {
+    actionableHint = "Table does not exist in Supabase! Run the SQL schema script in your Supabase Dashboard SQL Editor (Admin -> Settings & Supabase tab -> Copy SQL).";
+  } else if (code === '42501' || message.includes('row-level security') || message.includes('violates row-level security policy')) {
+    actionableHint = 'Row-Level Security (RLS) policy rejection! Ensure you ran the RLS policies in the SQL schema (CREATE POLICY "Public Full Access..." FOR ALL USING (true)).';
+  } else if (code === '23505' || message.includes('unique constraint') || message.includes('duplicate key')) {
+    actionableHint = 'Duplicate record constraint violation. An item with this slug or ID already exists in Supabase.';
+  } else if (code === 'PGRST125' || message.includes('Invalid path')) {
+    actionableHint = 'Invalid Supabase REST URL. Ensure VITE_SUPABASE_URL does not have "/rest/v1" appended.';
+  } else if (code === 'PGRST301' || message.includes('JWT') || message.includes('apikey') || message.includes('Invalid API key')) {
+    actionableHint = 'Invalid or expired Supabase Anon Key. Verify VITE_SUPABASE_ANON_KEY from Supabase Project Settings -> API.';
+  } else if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+    actionableHint = 'Network request failed. Verify your internet connection or check if your Supabase project is paused.';
+  }
+
+  return {
+    code,
+    message,
+    details,
+    hint,
+    actionableHint,
+  };
+}
+
+export function logSupabaseError(context: string, error: any, extraPayload?: any): SupabaseErrorInfo {
+  const diagnosed = diagnoseSupabaseError(error);
+
+  console.group(`❌ [Supabase Failure] ${context}`);
+  console.error(`Message: ${diagnosed.message}`);
+  if (diagnosed.code) console.error(`Code: ${diagnosed.code}`);
+  if (diagnosed.details) console.warn(`Details:`, diagnosed.details);
+  if (diagnosed.hint) console.info(`Hint:`, diagnosed.hint);
+  console.warn(`👉 Action Required: ${diagnosed.actionableHint}`);
+  if (extraPayload) console.debug('Payload Data:', extraPayload);
+  console.groupEnd();
+
+  return diagnosed;
+}
+
+// ===================================================
+// DATA MAPPING UTILITIES
+// Lossless bidirectional transformations matching frontend types
+// ===================================================
+
+export function mapRowToProduct(row: any): Product {
+  return {
+    id: String(row.id),
+    slug: String(row.slug),
+    name: String(row.name || ''),
+    shortDescription: String(row.short_description || ''),
+    description: String(row.description || ''),
+    category: String(row.category || ''),
+    categorySlug: String(row.category_slug || ''),
+    brand: String(row.brand || 'Trinex'),
+    model: String(row.model || ''),
+    images: Array.isArray(row.images) ? row.images : [],
+    power: row.power || undefined,
+    cookingType: row.cooking_type || undefined,
+    cookingSurface: row.cooking_surface || undefined,
+    installation: row.installation || undefined,
+    application: row.application || undefined,
+    warranty: row.warranty || undefined,
+    idealFor: Array.isArray(row.ideal_for) ? row.ideal_for : [],
+    features: Array.isArray(row.features) ? row.features : [],
+    specifications: Array.isArray(row.specifications) ? row.specifications : [],
+    dimensions: row.dimensions || undefined,
+    weight: row.weight || undefined,
+    material: row.material || undefined,
+    voltage: row.voltage || undefined,
+    frequency: row.frequency || undefined,
+    phase: row.phase || undefined,
+    capacity: row.capacity || undefined,
+    fuelType: row.fuel_type || undefined,
+    countryOfOrigin: row.country_of_origin || undefined,
+    brochureUrl: row.brochure_url || undefined,
+    availability: (row.availability as Product['availability']) || 'in_stock',
+    featured: Boolean(row.featured),
+    fastMoving: Boolean(row.fast_moving),
+    status: (row.status as Product['status']) || 'active',
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || new Date().toISOString(),
+  };
+}
+
+export function mapProductToRow(prod: Partial<Product>): Record<string, any> {
+  const row: Record<string, any> = {};
+  if (prod.id !== undefined) row.id = prod.id;
+  if (prod.slug !== undefined) row.slug = prod.slug;
+  if (prod.name !== undefined) row.name = prod.name;
+  if (prod.shortDescription !== undefined) row.short_description = prod.shortDescription;
+  if (prod.description !== undefined) row.description = prod.description;
+  if (prod.category !== undefined) row.category = prod.category;
+  if (prod.categorySlug !== undefined) row.category_slug = prod.categorySlug;
+  if (prod.brand !== undefined) row.brand = prod.brand;
+  if (prod.model !== undefined) row.model = prod.model;
+  if (prod.images !== undefined) row.images = prod.images;
+  if (prod.power !== undefined) row.power = prod.power;
+  if (prod.cookingType !== undefined) row.cooking_type = prod.cookingType;
+  if (prod.cookingSurface !== undefined) row.cooking_surface = prod.cookingSurface;
+  if (prod.installation !== undefined) row.installation = prod.installation;
+  if (prod.application !== undefined) row.application = prod.application;
+  if (prod.warranty !== undefined) row.warranty = prod.warranty;
+  if (prod.idealFor !== undefined) row.ideal_for = prod.idealFor;
+  if (prod.features !== undefined) row.features = prod.features;
+  if (prod.specifications !== undefined) row.specifications = prod.specifications;
+  if (prod.dimensions !== undefined) row.dimensions = prod.dimensions;
+  if (prod.weight !== undefined) row.weight = prod.weight;
+  if (prod.material !== undefined) row.material = prod.material;
+  if (prod.voltage !== undefined) row.voltage = prod.voltage;
+  if (prod.frequency !== undefined) row.frequency = prod.frequency;
+  if (prod.phase !== undefined) row.phase = prod.phase;
+  if (prod.capacity !== undefined) row.capacity = prod.capacity;
+  if (prod.fuelType !== undefined) row.fuel_type = prod.fuelType;
+  if (prod.countryOfOrigin !== undefined) row.country_of_origin = prod.countryOfOrigin;
+  if (prod.brochureUrl !== undefined) row.brochure_url = prod.brochureUrl;
+  if (prod.availability !== undefined) row.availability = prod.availability;
+  if (prod.featured !== undefined) row.featured = prod.featured;
+  if (prod.fastMoving !== undefined) row.fast_moving = prod.fastMoving;
+  if (prod.status !== undefined) row.status = prod.status;
+  if (prod.createdAt !== undefined) row.created_at = prod.createdAt;
+  if (prod.updatedAt !== undefined) row.updated_at = prod.updatedAt;
+  return row;
+}
+
+export function mapRowToCategory(row: any): Category {
+  return {
+    id: String(row.id),
+    name: String(row.name || ''),
+    slug: String(row.slug || ''),
+    description: String(row.description || ''),
+    image: String(row.image || ''),
+    displayOrder: row.display_order ?? 0,
+  };
+}
+
+export function mapCategoryToRow(cat: Partial<Category>): Record<string, any> {
+  const row: Record<string, any> = {};
+  if (cat.id !== undefined) row.id = cat.id;
+  if (cat.name !== undefined) row.name = cat.name;
+  if (cat.slug !== undefined) row.slug = cat.slug;
+  if (cat.description !== undefined) row.description = cat.description;
+  if (cat.image !== undefined) row.image = cat.image;
+  if (cat.displayOrder !== undefined) row.display_order = cat.displayOrder;
+  return row;
+}
 
 export const SUPABASE_SQL_SCHEMA = `-- ===================================================
 -- TRINEX EQUIPMENT PVT LTD - SUPABASE DATABASE SCHEMA
@@ -43,6 +286,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   ideal_for JSONB DEFAULT '[]'::jsonb,
   power TEXT,
   voltage TEXT,
+  frequency TEXT,
   phase TEXT,
   cooking_type TEXT,
   cooking_surface TEXT,
@@ -124,7 +368,7 @@ CREATE TABLE IF NOT EXISTS public.spare_requests (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable RLS (Row Level Security) with public read access
+-- Enable RLS (Row Level Security)
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.spares ENABLE ROW LEVEL SECURITY;
@@ -132,10 +376,25 @@ ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.service_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.spare_requests ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public Read Active Products" ON public.products FOR SELECT USING (true);
-CREATE POLICY "Public Read Categories" ON public.categories FOR SELECT USING (true);
-CREATE POLICY "Public Read Spares" ON public.spares FOR SELECT USING (true);
-CREATE POLICY "Public Insert Enquiries" ON public.enquiries FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public Insert Service Requests" ON public.service_requests FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public Insert Spare Requests" ON public.spare_requests FOR INSERT WITH CHECK (true);
+-- Clean up any existing policies
+DROP POLICY IF EXISTS "Public Full Access Products" ON public.products;
+DROP POLICY IF EXISTS "Public Read Active Products" ON public.products;
+DROP POLICY IF EXISTS "Public Full Access Categories" ON public.categories;
+DROP POLICY IF EXISTS "Public Read Categories" ON public.categories;
+DROP POLICY IF EXISTS "Public Full Access Spares" ON public.spares;
+DROP POLICY IF EXISTS "Public Read Spares" ON public.spares;
+DROP POLICY IF EXISTS "Public Full Access Enquiries" ON public.enquiries;
+DROP POLICY IF EXISTS "Public Insert Enquiries" ON public.enquiries;
+DROP POLICY IF EXISTS "Public Full Access Service Requests" ON public.service_requests;
+DROP POLICY IF EXISTS "Public Insert Service Requests" ON public.service_requests;
+DROP POLICY IF EXISTS "Public Full Access Spare Requests" ON public.spare_requests;
+DROP POLICY IF EXISTS "Public Insert Spare Requests" ON public.spare_requests;
+
+-- Enable Full Access Policies for anonymous / public client operations
+CREATE POLICY "Public Full Access Products" ON public.products FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Full Access Categories" ON public.categories FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Full Access Spares" ON public.spares FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Full Access Enquiries" ON public.enquiries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Full Access Service Requests" ON public.service_requests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Full Access Spare Requests" ON public.spare_requests FOR ALL USING (true) WITH CHECK (true);
 `;

@@ -31,21 +31,28 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ onOpenQuoteModal }
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (slug) {
-      const p = productStore.getProductBySlug(slug);
-      setProduct(p);
-      setActiveImageIndex(0);
-      window.scrollTo(0, 0);
+    const updateProductData = () => {
+      if (slug) {
+        const p = productStore.getProductBySlug(slug);
+        setProduct(p);
 
-      // Dynamic SEO Title and Meta Description
-      if (p) {
-        document.title = `${p.name} ${p.model || ''} | Trinex Equipment Pvt Ltd`;
-        const metaDesc = document.querySelector('meta[name="description"]');
-        if (metaDesc) {
-          metaDesc.setAttribute('content', p.shortDescription || `Commercial ${p.name} from Trinex Equipment.`);
+        // Dynamic SEO Title and Meta Description
+        if (p) {
+          document.title = `${p.name} ${p.model || ''} | Trinex Equipment Pvt Ltd`;
+          const metaDesc = document.querySelector('meta[name="description"]');
+          if (metaDesc) {
+            metaDesc.setAttribute('content', p.shortDescription || `Commercial ${p.name} from Trinex Equipment.`);
+          }
         }
       }
-    }
+    };
+
+    updateProductData();
+    setActiveImageIndex(0);
+    window.scrollTo(0, 0);
+
+    const unsubscribe = productStore.subscribe(updateProductData);
+    return () => unsubscribe();
   }, [slug]);
 
   if (!product) {

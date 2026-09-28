@@ -29,7 +29,14 @@ import { productStore, slugify } from '../services/productStore';
 import { sparesStore } from '../services/sparesStore';
 import { enquiryStore } from '../services/enquiryStore';
 import { Product, Category, SparePart, ProductSpec, EnquiryStatus } from '../types/product';
-import { SUPABASE_SQL_SCHEMA, isSupabaseConfigured } from '../services/supabaseClient';
+import {
+  SUPABASE_SQL_SCHEMA,
+  isSupabaseConfigured,
+  getSupabaseConfig,
+  setSupabaseConfig,
+  getSupabase,
+  diagnoseSupabaseError
+} from '../services/supabaseClient';
 
 const AVAILABLE_SAMPLE_IMAGES = [
   '/assets/images/countertop_induction_hob.png',
@@ -184,6 +191,62 @@ export const Admin: React.FC = () => {
   const [copiedSchema, setCopiedSchema] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
+  const supabaseInitialConfig = getSupabaseConfig();
+  const [supabaseUrlInput, setSupabaseUrlInput] = useState(supabaseInitialConfig.url);
+  const [supabaseKeyInput, setSupabaseKeyInput] = useState(supabaseInitialConfig.anonKey);
+  const [isDbConnected, setIsDbConnected] = useState(supabaseInitialConfig.isConfigured);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTestConnection = async () => {
+    setTestingConnection(true);
+    setTestResult(null);
+    try {
+      const client = getSupabase();
+      if (!client) {
+        setTestResult({
+          success: false,
+          message: 'Supabase client is not configured. Please supply project URL and Anon key.',
+        });
+        return;
+      }
+      const { data, error } = await client.from('products').select('id').limit(1);
+      if (error) {
+        const diag = diagnoseSupabaseError(error);
+        setTestResult({
+          success: false,
+          message: `${diag.message} — Action: ${diag.actionableHint}`,
+        });
+      } else {
+        setTestResult({
+          success: true,
+          message: `Connected successfully to Supabase! The "products" table is active and accessible (${data ? data.length : 0} records fetched).`,
+        });
+      }
+    } catch (e: any) {
+      const diag = diagnoseSupabaseError(e);
+      setTestResult({
+        success: false,
+        message: `${diag.message} — Action: ${diag.actionableHint}`,
+      });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleSaveSupabaseConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ok = setSupabaseConfig(supabaseUrlInput, supabaseKeyInput);
+    setIsDbConnected(ok);
+    if (ok) {
+      await productStore.refresh();
+      showNotification('Supabase configuration saved & connected!');
+      handleTestConnection();
+    } else {
+      showNotification('Configuration cleared.');
+    }
+  };
+
   const showNotification = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
@@ -308,51 +371,75 @@ export const Admin: React.FC = () => {
     setProductModalOpen(true);
   };
 
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productForm.name.trim()) {
       alert('Product name is required');
       return;
     }
 
-    if (editingProductId) {
-      productStore.updateProduct(editingProductId, {
-        ...productForm,
-        slug: productForm.slug ? slugify(productForm.slug) : slugify(`${productForm.name} ${productForm.model}`),
-      });
-      showNotification(`Product "${productForm.name}" updated successfully!`);
-    } else {
-      productStore.addProduct({
-        ...productForm,
-        slug: productForm.slug ? slugify(productForm.slug) : slugify(`${productForm.name} ${productForm.model}`),
-      });
-      showNotification(`Product "${productForm.name}" created and published!`);
+    try {
+      if (editingProductId) {
+        await productStore.updateProduct(editingProductId, {
+          ...productForm,
+          slug: productForm.slug ? slugify(productForm.slug) : slugify(`${productForm.name} ${productForm.model}`),
+        });
+        showNotification(`Product "${productForm.name}" updated successfully in Supabase!`);
+      } else {
+        await productStore.addProduct({
+          ...productForm,
+          slug: productForm.slug ? slugify(productForm.slug) : slugify(`${productForm.name} ${productForm.model}`),
+        });
+        showNotification(`Product "${productForm.name}" created and saved to Supabase!`);
+      }
+      setProductModalOpen(false);
+    } catch (err: any) {
+      const diag = diagnoseSupabaseError(err);
+      alert(`❌ Failed to save product to Supabase:\n\n${diag.message}\n\n👉 Solution: ${diag.actionableHint}`);
     }
-
-    setProductModalOpen(false);
   };
 
-  const handleDeleteProduct = (id: string, name: string) => {
+  const handleDeleteProduct = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      productStore.deleteProduct(id);
-      showNotification(`Product "${name}" deleted.`);
+      try {
+        await productStore.deleteProduct(id);
+        showNotification(`Product "${name}" deleted.`);
+      } catch (err: any) {
+        const diag = diagnoseSupabaseError(err);
+        alert(`❌ Failed to delete product from Supabase:\n\n${diag.message}\n\n👉 Solution: ${diag.actionableHint}`);
+      }
     }
   };
 
-  const handleToggleFastMoving = (prod: Product) => {
-    productStore.updateProduct(prod.id, { fastMoving: !prod.fastMoving });
-    showNotification(`Toggled Fast Moving for ${prod.name}`);
+  const handleToggleFastMoving = async (prod: Product) => {
+    try {
+      await productStore.updateProduct(prod.id, { fastMoving: !prod.fastMoving });
+      showNotification(`Toggled Fast Moving for ${prod.name}`);
+    } catch (err: any) {
+      const diag = diagnoseSupabaseError(err);
+      alert(`❌ Failed to toggle fast moving:\n\n${diag.message}\n\n👉 Solution: ${diag.actionableHint}`);
+    }
   };
 
-  const handleToggleFeatured = (prod: Product) => {
-    productStore.updateProduct(prod.id, { featured: !prod.featured });
-    showNotification(`Toggled Featured for ${prod.name}`);
+  const handleToggleFeatured = async (prod: Product) => {
+    try {
+      await productStore.updateProduct(prod.id, { featured: !prod.featured });
+      showNotification(`Toggled Featured for ${prod.name}`);
+    } catch (err: any) {
+      const diag = diagnoseSupabaseError(err);
+      alert(`❌ Failed to toggle featured:\n\n${diag.message}\n\n👉 Solution: ${diag.actionableHint}`);
+    }
   };
 
-  const handleToggleStatus = (prod: Product) => {
-    const newStatus = prod.status === 'active' ? 'draft' : 'active';
-    productStore.updateProduct(prod.id, { status: newStatus });
-    showNotification(`Status updated to ${newStatus}`);
+  const handleToggleStatus = async (prod: Product) => {
+    try {
+      const newStatus = prod.status === 'active' ? 'draft' : 'active';
+      await productStore.updateProduct(prod.id, { status: newStatus });
+      showNotification(`Status updated to ${newStatus}`);
+    } catch (err: any) {
+      const diag = diagnoseSupabaseError(err);
+      alert(`❌ Failed to update status in Supabase:\n\n${diag.message}\n\n👉 Solution: ${diag.actionableHint}`);
+    }
   };
 
   // Image Upload handler (Base64 file reader)
@@ -377,25 +464,35 @@ export const Admin: React.FC = () => {
   // ----------------------------------------------------
   // Category Operations
   // ----------------------------------------------------
-  const handleSaveCategory = (e: React.FormEvent) => {
+  const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!categoryForm.name.trim()) return;
 
-    productStore.addCategory({
-      name: categoryForm.name,
-      slug: categoryForm.slug ? slugify(categoryForm.slug) : slugify(categoryForm.name),
-      description: categoryForm.description,
-      image: categoryForm.image,
-    });
+    try {
+      await productStore.addCategory({
+        name: categoryForm.name,
+        slug: categoryForm.slug ? slugify(categoryForm.slug) : slugify(categoryForm.name),
+        description: categoryForm.description,
+        image: categoryForm.image,
+      });
 
-    setCategoryModalOpen(false);
-    showNotification(`Category "${categoryForm.name}" created!`);
+      setCategoryModalOpen(false);
+      showNotification(`Category "${categoryForm.name}" created in Supabase!`);
+    } catch (err: any) {
+      const diag = diagnoseSupabaseError(err);
+      alert(`❌ Failed to save category to Supabase:\n\n${diag.message}\n\n👉 Solution: ${diag.actionableHint}`);
+    }
   };
 
-  const handleDeleteCategory = (id: string, name: string) => {
+  const handleDeleteCategory = async (id: string, name: string) => {
     if (window.confirm(`Delete category "${name}"?`)) {
-      productStore.deleteCategory(id);
-      showNotification(`Category "${name}" deleted.`);
+      try {
+        await productStore.deleteCategory(id);
+        showNotification(`Category "${name}" deleted.`);
+      } catch (err: any) {
+        const diag = diagnoseSupabaseError(err);
+        alert(`❌ Failed to delete category from Supabase:\n\n${diag.message}\n\n👉 Solution: ${diag.actionableHint}`);
+      }
     }
   };
 
@@ -1151,25 +1248,98 @@ export const Admin: React.FC = () => {
             ==================================================== */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl border border-trinex-border p-6 shadow-xs space-y-4">
+            <div className="bg-white rounded-xl border border-trinex-border p-6 shadow-xs space-y-5">
               <h3 className="text-sm font-bold text-trinex-black uppercase tracking-wider">
-                Database & Persistence Status
+                Database & Supabase Connection
               </h3>
               
-              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-between">
+              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <span className="font-bold text-xs text-trinex-black block">Active Persistent Storage</span>
-                  <span className="text-xs text-gray-600">Local Browser Store + Supabase Bridge Ready</span>
+                  <span className="font-bold text-xs text-trinex-black block">Active Database Backend</span>
+                  <span className="text-xs text-gray-600">
+                    {isDbConnected
+                      ? 'Direct Supabase PostgreSQL Integration Active (Zero LocalStorage)'
+                      : 'Supabase Not Configured (Running in-memory cache until connected)'}
+                  </span>
                 </div>
-                <span className="px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 font-bold text-xs">
-                  {isSupabaseConfigured ? 'Connected to Remote Supabase' : 'Persistent Local Store Active'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-1 rounded font-bold text-xs flex items-center gap-1.5 ${
+                    isDbConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    {isDbConnected ? 'Connected to Remote Supabase' : 'Offline / In-Memory'}
+                  </span>
+                </div>
               </div>
+
+              {/* Supabase Credentials Form */}
+              <form onSubmit={handleSaveSupabaseConfig} className="p-4 rounded-lg bg-white border border-gray-200 space-y-4">
+                <span className="text-xs font-bold text-gray-800 block">Supabase Connection Credentials</span>
+                <p className="text-xs text-gray-500">
+                  Configure your Supabase credentials here or define them via <code className="bg-gray-100 px-1 py-0.5 rounded font-mono">VITE_SUPABASE_URL</code> and <code className="bg-gray-100 px-1 py-0.5 rounded font-mono">VITE_SUPABASE_ANON_KEY</code> in your environment file.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Supabase Project URL
+                    </label>
+                    <input
+                      type="url"
+                      value={supabaseUrlInput}
+                      onChange={(e) => setSupabaseUrlInput(e.target.value)}
+                      placeholder="https://xyzcompany.supabase.co"
+                      className="w-full px-3 py-2 text-xs rounded border border-gray-300 font-mono focus:border-trinex-red focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Supabase Anon / Public API Key
+                    </label>
+                    <input
+                      type="password"
+                      value={supabaseKeyInput}
+                      onChange={(e) => setSupabaseKeyInput(e.target.value)}
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      className="w-full px-3 py-2 text-xs rounded border border-gray-300 font-mono focus:border-trinex-red focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded bg-trinex-red hover:bg-trinex-red-dark text-white text-xs font-bold transition-colors"
+                  >
+                    Save & Connect Supabase
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleTestConnection}
+                    disabled={testingConnection || !supabaseUrlInput || !supabaseKeyInput}
+                    className="px-4 py-2 rounded bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold transition-colors disabled:opacity-50"
+                  >
+                    {testingConnection ? 'Testing Connection...' : 'Test Connection'}
+                  </button>
+                </div>
+
+                {testResult && (
+                  <div className={`p-3 rounded text-xs font-semibold ${
+                    testResult.success
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-red-50 text-red-800 border border-red-200'
+                  }`}>
+                    {testResult.message}
+                  </div>
+                )}
+              </form>
 
               <div className="space-y-2">
                 <span className="text-xs font-bold text-gray-700 block">Supabase SQL Schema (One-Click Setup)</span>
                 <p className="text-xs text-gray-500">
-                  When you are ready to connect remote Supabase, paste this SQL script in your Supabase SQL Editor:
+                  Ensure you run this SQL script in your Supabase SQL Editor to initialize tables and enable full public CRUD policies:
                 </p>
                 <div className="relative">
                   <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs font-mono max-h-56 overflow-y-auto">
@@ -1191,10 +1361,10 @@ export const Admin: React.FC = () => {
 
               <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
                 <button
-                  onClick={() => {
-                    if (window.confirm('Reset catalog back to initial single demo product? Any added products will be replaced.')) {
-                      productStore.resetToDefault();
-                      showNotification('Reset to default single demo product completed.');
+                  onClick={async () => {
+                    if (window.confirm('Reset catalog back to initial single demo product? Any added products in Supabase will be replaced.')) {
+                      await productStore.resetToDefault();
+                      showNotification('Reset to default single demo product completed in Supabase.');
                     }
                   }}
                   className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold"
