@@ -14,6 +14,7 @@ import {
 import { sparesStore } from '../services/sparesStore';
 import { enquiryStore } from '../services/enquiryStore';
 import { SparePart } from '../types/product';
+import { SpareCard } from '../components/SpareCard';
 
 interface SparesProps {
   onOpenQuoteModal: (productContext?: string) => void;
@@ -201,51 +202,12 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {spares.map((spare) => (
-            <div
+            <SpareCard
               key={spare.id}
-              className="bg-white rounded-xl border border-trinex-border p-5 flex flex-col justify-between hover:shadow-card transition-shadow space-y-4"
-            >
-              <div>
-                <div className="h-44 w-full bg-trinex-light-gray rounded-lg p-3 flex items-center justify-center mb-3">
-                  <img
-                    src={spare.image || '/assets/images/countertop_induction_hob.png'}
-                    alt={spare.name}
-                    className="max-h-full max-w-full object-contain"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold text-trinex-red uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded">
-                    {spare.category}
-                  </span>
-                  <h3 className="text-base font-bold text-trinex-black">
-                    {spare.name}
-                  </h3>
-                  {spare.partNumber && (
-                    <p className="text-xs text-gray-500">
-                      Part No: <span className="font-mono font-bold text-trinex-black">{spare.partNumber}</span>
-                    </p>
-                  )}
-                  {spare.compatibleEquipment && (
-                    <p className="text-xs text-gray-600">
-                      Compatible: <span className="font-medium text-gray-800">{spare.compatibleEquipment}</span>
-                    </p>
-                  )}
-                  <p className="text-xs text-gray-500 line-clamp-2 pt-1">
-                    {spare.shortDescription}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
-                <button
-                  onClick={() => handleSelectSpareForEnquiry(spare)}
-                  className="w-full py-2.5 px-3 rounded bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider shadow-xs transition-colors text-center"
-                >
-                  Request This Spare
-                </button>
-              </div>
-            </div>
+              spare={spare}
+              onOpenQuoteModal={onOpenQuoteModal}
+              onSelectForEnquiry={handleSelectSpareForEnquiry}
+            />
           ))}
         </div>
       </section>

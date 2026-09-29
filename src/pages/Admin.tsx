@@ -55,7 +55,17 @@ const AVAILABLE_SAMPLE_IMAGES = [
   '/assets/images/category_cooking.jpg',
   '/assets/images/category_refrigeration.jpg',
   '/assets/images/category_food_prep.jpg',
-  '/assets/images/category_holding_steamer.jpg'
+];
+
+const CATEGORY_SAMPLE_IMAGES = [
+  '/assets/images/category_induction.jpg',
+  '/assets/images/category_cooking.jpg',
+  '/assets/images/category_refrigeration.jpg',
+  '/assets/images/category_food_prep.jpg',
+  '/assets/images/category_holding_steamer.jpg',
+  '/assets/images/trinex_induction_banner.jpg',
+  '/assets/images/cooking_range.jpg',
+  '/assets/images/commercial_refrigerator.jpg'
 ];
 
 const IDEAL_FOR_OPTIONS = [
@@ -160,11 +170,19 @@ export const Admin: React.FC = () => {
 
   // Category Editor Modal
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-  const [categoryForm, setCategoryForm] = useState({
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [categoryForm, setCategoryForm] = useState<{
+    name: string;
+    slug: string;
+    description: string;
+    image: string;
+    displayOrder: number;
+  }>({
     name: '',
     slug: '',
     description: '',
     image: '/assets/images/category_induction.jpg',
+    displayOrder: 1,
   });
 
   // Spare Part Editor Modal
@@ -464,20 +482,80 @@ export const Admin: React.FC = () => {
   // ----------------------------------------------------
   // Category Operations
   // ----------------------------------------------------
+  const handleOpenAddCategory = () => {
+    setEditingCategoryId(null);
+    setCategoryForm({
+      name: '',
+      slug: '',
+      description: '',
+      image: '/assets/images/category_induction.jpg',
+      displayOrder: categories.length + 1,
+    });
+    setCategoryModalOpen(true);
+  };
+
+  const handleOpenEditCategory = (cat: Category) => {
+    setEditingCategoryId(cat.id);
+    setCategoryForm({
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description || '',
+      image: cat.image || '/assets/images/category_induction.jpg',
+      displayOrder: cat.displayOrder ?? 1,
+    });
+    setCategoryModalOpen(true);
+  };
+
+  const handleCategoryImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setCategoryForm((prev) => ({
+          ...prev,
+          image: reader.result as string,
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!categoryForm.name.trim()) return;
+    const trimmedName = categoryForm.name.trim();
+    if (!trimmedName) {
+      alert('Category name is required.');
+      return;
+    }
+
+    const finalSlug = categoryForm.slug.trim()
+      ? slugify(categoryForm.slug)
+      : slugify(trimmedName);
 
     try {
-      await productStore.addCategory({
-        name: categoryForm.name,
-        slug: categoryForm.slug ? slugify(categoryForm.slug) : slugify(categoryForm.name),
-        description: categoryForm.description,
-        image: categoryForm.image,
-      });
+      if (editingCategoryId) {
+        await productStore.updateCategory(editingCategoryId, {
+          name: trimmedName,
+          slug: finalSlug,
+          description: categoryForm.description.trim(),
+          image: categoryForm.image.trim() || '/assets/images/category_induction.jpg',
+          displayOrder: Number(categoryForm.displayOrder) || 1,
+        });
+        showNotification(`Category "${trimmedName}" updated successfully in Supabase!`);
+      } else {
+        await productStore.addCategory({
+          name: trimmedName,
+          slug: finalSlug,
+          description: categoryForm.description.trim(),
+          image: categoryForm.image.trim() || '/assets/images/category_induction.jpg',
+          displayOrder: Number(categoryForm.displayOrder) || (categories.length + 1),
+        });
+        showNotification(`Category "${trimmedName}" created and saved to Supabase!`);
+      }
 
       setCategoryModalOpen(false);
-      showNotification(`Category "${categoryForm.name}" created in Supabase!`);
     } catch (err: any) {
       const diag = diagnoseSupabaseError(err);
       alert(`❌ Failed to save category to Supabase:\n\n${diag.message}\n\n👉 Solution: ${diag.actionableHint}`);
@@ -485,7 +563,16 @@ export const Admin: React.FC = () => {
   };
 
   const handleDeleteCategory = async (id: string, name: string) => {
-    if (window.confirm(`Delete category "${name}"?`)) {
+    const targetCat = categories.find((c) => c.id === id);
+    const assignedCount = targetCat
+      ? products.filter((p) => p.categorySlug === targetCat.slug).length
+      : 0;
+
+    const confirmMsg = assignedCount > 0
+      ? `Are you sure you want to delete category "${name}"?\n\n⚠️ Warning: There are ${assignedCount} product(s) assigned to this category.`
+      : `Are you sure you want to delete category "${name}"?`;
+
+    if (window.confirm(confirmMsg)) {
       try {
         await productStore.deleteCategory(id);
         showNotification(`Category "${name}" deleted.`);
@@ -509,6 +596,20 @@ export const Admin: React.FC = () => {
       image: '/assets/images/countertop_induction_hob.png',
       shortDescription: '',
       specifications: [{ label: 'Material', value: 'Ceramic Glass' }]
+    });
+    setSpareModalOpen(true);
+  };
+
+  const handleOpenEditSpare = (spare: SparePart) => {
+    setEditingSpareId(spare.id);
+    setSpareForm({
+      name: spare.name,
+      partNumber: spare.partNumber || '',
+      compatibleEquipment: spare.compatibleEquipment || '',
+      category: spare.category || 'Commercial Induction',
+      image: spare.image || '/assets/images/countertop_induction_hob.png',
+      shortDescription: spare.shortDescription || '',
+      specifications: spare.specifications || [{ label: 'Material', value: 'Ceramic Glass' }]
     });
     setSpareModalOpen(true);
   };
@@ -968,8 +1069,8 @@ export const Admin: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => setCategoryModalOpen(true)}
-                className="px-4 py-2 rounded-lg bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5"
+                onClick={handleOpenAddCategory}
+                className="px-4 py-2 rounded-lg bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>+ Add Category</span>
@@ -978,27 +1079,75 @@ export const Admin: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {categories.map((cat) => (
-                <div key={cat.id} className="bg-white rounded-xl border border-trinex-border p-4 flex flex-col justify-between shadow-xs">
+                <div key={cat.id} className="bg-white rounded-xl border border-trinex-border p-4 flex flex-col justify-between shadow-xs hover:border-gray-300 transition-all">
                   <div>
-                    <div className="h-32 rounded-lg overflow-hidden bg-gray-100 mb-3 relative">
-                      <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
-                      <span className="absolute bottom-2 left-2 bg-trinex-black/80 text-white text-[10px] font-mono px-2 py-0.5 rounded">
+                    <div className="h-36 rounded-lg overflow-hidden bg-gray-100 mb-3 relative group">
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/assets/images/category_induction.jpg';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditCategory(cat)}
+                          className="px-3 py-1.5 bg-white text-trinex-black rounded-lg text-xs font-bold shadow flex items-center gap-1.5 hover:bg-gray-50 transition-colors"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Edit</span>
+                        </button>
+                        <a
+                          href={`/products?category=${cat.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-white text-trinex-black rounded-lg text-xs font-bold shadow flex items-center gap-1.5 hover:bg-gray-50 transition-colors"
+                          title="View on site"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-gray-700" />
+                          <span>View</span>
+                        </a>
+                      </div>
+                      <span className="absolute bottom-2 left-2 bg-trinex-black/85 text-white text-[10px] font-mono px-2 py-0.5 rounded">
                         /{cat.slug}
                       </span>
+                      {cat.displayOrder !== undefined && (
+                        <span className="absolute top-2 right-2 bg-white/90 backdrop-blur-xs text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded shadow-xs">
+                          Order: {cat.displayOrder}
+                        </span>
+                      )}
                     </div>
                     <h4 className="font-bold text-sm text-trinex-black">{cat.name}</h4>
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{cat.description}</p>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                      {cat.description || 'No description provided.'}
+                    </p>
                   </div>
                   <div className="pt-3 border-t border-gray-100 flex items-center justify-between mt-3">
                     <span className="text-[11px] font-semibold text-gray-500">
                       {products.filter((p) => p.categorySlug === cat.slug).length} Products Assigned
                     </span>
-                    <button
-                      onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                      className="text-trinex-red hover:text-red-800 p-1 text-xs font-bold"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditCategory(cat)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit Category Details & Image"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-trinex-red hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                        title="Delete Category"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1046,12 +1195,36 @@ export const Admin: React.FC = () => {
 
                   <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                     <span className="text-[10px] font-bold text-emerald-600 uppercase">In Stock</span>
-                    <button
-                      onClick={() => handleDeleteSpare(spare.id, spare.name)}
-                      className="text-xs font-bold text-trinex-red hover:underline"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={`/spares/${spare.slug || spare.partNumber || spare.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold text-gray-600 hover:text-trinex-black hover:bg-gray-100 rounded transition-colors"
+                        title="View Live Page"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>View</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditSpare(spare)}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit Spare Part"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSpare(spare.id, spare.name)}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold text-trinex-red hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                        title="Delete Spare Part"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1894,68 +2067,175 @@ export const Admin: React.FC = () => {
       )}
 
       {/* ====================================================
-          CATEGORY MODAL
+          CATEGORY MODAL (ADD / EDIT)
           ==================================================== */}
       {categoryModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-trinex-border p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-              <h3 className="font-bold text-base text-trinex-black">+ Add Category</h3>
-              <button onClick={() => setCategoryModalOpen(false)}>
-                <X className="w-5 h-5 text-gray-400" />
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-trinex-border overflow-hidden my-8 max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            
+            {/* Modal Header */}
+            <div className="bg-trinex-black px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
+              <div>
+                <span className="text-[10px] font-bold text-trinex-red uppercase tracking-wider block">
+                  Category Management
+                </span>
+                <h3 className="text-base font-bold">
+                  {editingCategoryId ? `Edit Category: ${categoryForm.name || 'Equipment Category'}` : '+ Add New Equipment Category'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCategoryModalOpen(false)}
+                className="p-1 rounded text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveCategory} className="space-y-3 text-left">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Category Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={categoryForm.name}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                  placeholder="e.g. Commercial Induction"
-                  className="w-full px-3 py-2 text-xs rounded border border-gray-300"
-                />
+            {/* Modal Scrollable Form */}
+            <form onSubmit={handleSaveCategory} className="p-6 overflow-y-auto flex-1 space-y-5 text-left">
+              
+              {/* Category Name & Display Order */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Category Name <span className="text-trinex-red">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={categoryForm.name}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setCategoryForm((prev) => ({
+                        ...prev,
+                        name,
+                        slug: slugify(name),
+                      }));
+                    }}
+                    placeholder="e.g. Commercial Induction Cooktops"
+                    className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red focus:ring-1 focus:ring-trinex-red"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={categoryForm.displayOrder}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, displayOrder: parseInt(e.target.value) || 1 })}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red focus:ring-1 focus:ring-trinex-red"
+                  />
+                </div>
               </div>
 
+              {/* Description */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Category Description</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Category Description
+                </label>
                 <textarea
                   rows={2}
                   value={categoryForm.description}
                   onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-                  placeholder="Summary of equipment in this category..."
-                  className="w-full px-3 py-2 text-xs rounded border border-gray-300 resize-none"
+                  placeholder="Brief summary of equipment in this commercial kitchen segment..."
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red focus:ring-1 focus:ring-trinex-red resize-none"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Banner Image Path</label>
-                <input
-                  type="text"
-                  value={categoryForm.image}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, image: e.target.value })}
-                  placeholder="/assets/images/category_induction.jpg"
-                  className="w-full px-3 py-2 text-xs rounded border border-gray-300 font-mono"
-                />
+              {/* Banner Image Management */}
+              <div className="space-y-3 pt-2 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-gray-700">
+                    Category Banner Image
+                  </label>
+                  <label className="cursor-pointer px-2.5 py-1 rounded bg-gray-100 hover:bg-gray-200 text-[11px] font-bold text-gray-700 flex items-center gap-1.5 transition-colors">
+                    <Upload className="w-3.5 h-3.5 text-trinex-red" />
+                    <span>Upload Local File</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCategoryImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {/* Live Image Preview Banner */}
+                <div className="h-36 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 relative group shadow-inner">
+                  {categoryForm.image ? (
+                    <img
+                      src={categoryForm.image}
+                      alt="Banner Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/assets/images/category_induction.jpg';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-1">
+                      <ImageIcon className="w-8 h-8 opacity-40" />
+                      <span className="text-xs">No banner image specified</span>
+                    </div>
+                  )}
+                  <span className="absolute bottom-2 right-2 bg-black/75 text-white text-[10px] font-mono px-2 py-0.5 rounded backdrop-blur-xs">
+                    Banner Preview
+                  </span>
+                </div>
+
+                {/* Quick Picker from Standard Category Assets */}
+                <div>
+                  <span className="text-[11px] font-bold text-gray-500 block mb-2">
+                    Quick Pick from Preset Category Banners:
+                  </span>
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                    {CATEGORY_SAMPLE_IMAGES.map((sample, i) => {
+                      const isSelected = categoryForm.image === sample;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setCategoryForm({ ...categoryForm, image: sample })}
+                          className={`h-12 rounded-lg overflow-hidden border transition-all ${
+                            isSelected
+                              ? 'border-trinex-red ring-2 ring-trinex-red/30 scale-105'
+                              : 'border-gray-200 hover:border-gray-400 opacity-75 hover:opacity-100'
+                          }`}
+                          title={`Select ${sample.split('/').pop()}`}
+                        >
+                          <img
+                            src={sample}
+                            alt="Preset"
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              {/* Modal Buttons */}
+              <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setCategoryModalOpen(false)}
-                  className="px-4 py-2 rounded text-xs font-bold text-gray-600"
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded bg-trinex-red text-white text-xs font-bold"
+                  className="px-5 py-2 rounded-lg bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-colors flex items-center gap-1.5"
                 >
-                  Save Category
+                  <Check className="w-4 h-4" />
+                  <span>{editingCategoryId ? 'Save Changes' : 'Create Category'}</span>
                 </button>
               </div>
+
             </form>
           </div>
         </div>

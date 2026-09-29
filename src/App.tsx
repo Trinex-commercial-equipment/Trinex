@@ -11,6 +11,7 @@ import { Products } from './pages/Products';
 import { ProductDetail } from './pages/ProductDetail';
 import { Services } from './pages/Services';
 import { Spares } from './pages/Spares';
+import { SpareDetail } from './pages/SpareDetail';
 import { Contact } from './pages/Contact';
 import { Admin } from './pages/Admin';
 
@@ -58,6 +59,7 @@ export const AppContent: React.FC = () => {
           <Route path="/products/:slug" element={<ProductDetail onOpenQuoteModal={handleOpenQuoteModal} />} />
           <Route path="/services" element={<Services onOpenQuoteModal={handleOpenQuoteModal} />} />
           <Route path="/spares" element={<Spares onOpenQuoteModal={handleOpenQuoteModal} />} />
+          <Route path="/spares/:slug" element={<SpareDetail onOpenQuoteModal={handleOpenQuoteModal} />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<Home onOpenQuoteModal={handleOpenQuoteModal} />} />

@@ -413,6 +413,10 @@ class ProductStoreService {
     const idx = this.categories.findIndex((c) => c.id === id);
     if (idx === -1) return null;
 
+    const oldCategory = this.categories[idx];
+    const oldSlug = oldCategory.slug;
+    const oldName = oldCategory.name;
+
     const supabase = getSupabase();
     if (supabase) {
       const row = mapCategoryToRow(updates);
@@ -429,10 +433,45 @@ class ProductStoreService {
       const updated = mapRowToCategory(data);
       console.log(`✅ [Supabase:ProductStore] Successfully updated category "${updated.name}" (ID: ${id}) in Supabase.`);
       this.categories[idx] = updated;
+
+      // If category name or slug changed, cascade to existing products in memory and in Supabase
+      const newSlug = updated.slug;
+      const newName = updated.name;
+      if (newSlug !== oldSlug || newName !== oldName) {
+        const affectedProducts = this.products.filter(
+          (p) => p.categorySlug.toLowerCase() === oldSlug.toLowerCase() || p.category.toLowerCase() === oldName.toLowerCase()
+        );
+        for (const prod of affectedProducts) {
+          prod.category = newName;
+          prod.categorySlug = newSlug;
+          try {
+            await supabase.from('products').update({
+              category: newName,
+              category_slug: newSlug,
+            }).eq('id', prod.id);
+          } catch (e) {
+            console.warn(`[Supabase Store] Failed cascading category update to product "${prod.id}":`, e);
+          }
+        }
+      }
+
       this.notify();
       return updated;
     } else {
-      this.categories[idx] = { ...this.categories[idx], ...updates };
+      const updated = { ...this.categories[idx], ...updates };
+      this.categories[idx] = updated;
+
+      const newSlug = updated.slug;
+      const newName = updated.name;
+      if (newSlug !== oldSlug || newName !== oldName) {
+        this.products.forEach((prod) => {
+          if (prod.categorySlug.toLowerCase() === oldSlug.toLowerCase() || prod.category.toLowerCase() === oldName.toLowerCase()) {
+            prod.category = newName;
+            prod.categorySlug = newSlug;
+          }
+        });
+      }
+
       this.notify();
       return this.categories[idx];
     }

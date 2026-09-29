@@ -60,6 +60,7 @@ export interface Category {
 
 export interface SparePart {
   id: string;
+  slug?: string;
   name: string;
   partNumber: string;
   compatibleEquipment: string;
