@@ -582,12 +582,13 @@ export const Admin: React.FC = () => {
       }
     }
   };
-
   // ----------------------------------------------------
   // Spare Operations
   // ----------------------------------------------------
+
   const handleOpenAddSpare = () => {
     setEditingSpareId(null);
+
     setSpareForm({
       name: '',
       partNumber: '',
@@ -595,50 +596,182 @@ export const Admin: React.FC = () => {
       category: 'Commercial Induction',
       image: '/assets/images/countertop_induction_hob.png',
       shortDescription: '',
-      specifications: [{ label: 'Material', value: 'Ceramic Glass' }]
+      specifications: [
+        {
+          label: 'Material',
+          value: 'Ceramic Glass',
+        },
+      ],
     });
+
     setSpareModalOpen(true);
   };
 
   const handleOpenEditSpare = (spare: SparePart) => {
     setEditingSpareId(spare.id);
+
     setSpareForm({
-      name: spare.name,
+      name: spare.name || '',
       partNumber: spare.partNumber || '',
       compatibleEquipment: spare.compatibleEquipment || '',
       category: spare.category || 'Commercial Induction',
-      image: spare.image || '/assets/images/countertop_induction_hob.png',
+      image:
+        spare.image ||
+        '/assets/images/countertop_induction_hob.png',
       shortDescription: spare.shortDescription || '',
-      specifications: spare.specifications || [{ label: 'Material', value: 'Ceramic Glass' }]
+      specifications:
+        spare.specifications &&
+        spare.specifications.length > 0
+          ? spare.specifications
+          : [
+              {
+                label: 'Material',
+                value: 'Ceramic Glass',
+              },
+            ],
     });
+
     setSpareModalOpen(true);
   };
 
-  const handleSaveSpare = (e: React.FormEvent) => {
+  const handleSpareImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file.');
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setSpareForm((prev) => ({
+          ...prev,
+          image: reader.result as string,
+        }));
+      }
+    };
+
+    reader.onerror = () => {
+      alert('Failed to read the selected image.');
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveSpare = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
-    if (!spareForm.name.trim()) return;
 
-    if (editingSpareId) {
-      sparesStore.updateSpare(editingSpareId, spareForm);
-      showNotification(`Spare part "${spareForm.name}" updated!`);
-    } else {
-      sparesStore.addSpare({
-        ...spareForm,
-        availability: 'in_stock',
-        status: 'active',
-      });
-      showNotification(`Spare part "${spareForm.name}" added to catalogue!`);
+    const trimmedName = spareForm.name.trim();
+
+    if (!trimmedName) {
+      alert('Spare part name is required.');
+      return;
     }
-    setSpareModalOpen(false);
+
+    try {
+      if (editingSpareId) {
+        // ------------------------------------------------
+        // UPDATE EXISTING SPARE
+        // ------------------------------------------------
+        await sparesStore.updateSpare(
+          editingSpareId,
+          {
+            name: trimmedName,
+            partNumber: spareForm.partNumber.trim(),
+            compatibleEquipment:
+              spareForm.compatibleEquipment.trim(),
+            category: spareForm.category.trim(),
+            image: spareForm.image,
+            shortDescription:
+              spareForm.shortDescription.trim(),
+            specifications: spareForm.specifications,
+          }
+        );
+
+        showNotification(
+          `Spare part "${trimmedName}" updated successfully in Supabase!`
+        );
+      } else {
+        // ------------------------------------------------
+        // CREATE NEW SPARE
+        // ------------------------------------------------
+        await sparesStore.addSpare({
+          name: trimmedName,
+          partNumber: spareForm.partNumber.trim(),
+          compatibleEquipment:
+            spareForm.compatibleEquipment.trim(),
+          category: spareForm.category.trim(),
+          image: spareForm.image,
+          shortDescription:
+            spareForm.shortDescription.trim(),
+          specifications: spareForm.specifications,
+
+          // These are supplied by Admin.
+          // createdAt / updatedAt / id are generated
+          // inside sparesStore.
+          availability: 'in_stock',
+          status: 'active',
+        });
+
+        showNotification(
+          `Spare part "${trimmedName}" created and saved to Supabase!`
+        );
+      }
+
+      setSpareModalOpen(false);
+
+      // Keep Admin UI immediately synchronized
+      setSpares(sparesStore.getAllSpares(true));
+    } catch (err: any) {
+      const diag = diagnoseSupabaseError(err);
+
+      alert(
+        `❌ Failed to save spare part to Supabase:\n\n` +
+        `${diag.message}\n\n` +
+        `👉 Solution: ${diag.actionableHint}`
+      );
+    }
   };
 
-  const handleDeleteSpare = (id: string, name: string) => {
-    if (window.confirm(`Delete spare part "${name}"?`)) {
-      sparesStore.deleteSpare(id);
-      showNotification(`Spare part "${name}" deleted.`);
+  const handleDeleteSpare = async (
+    id: string,
+    name: string
+  ) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete spare part "${name}"?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await sparesStore.deleteSpare(id);
+
+      showNotification(
+        `Spare part "${name}" deleted from Supabase.`
+      );
+
+      // Keep Admin UI immediately synchronized
+      setSpares(sparesStore.getAllSpares(true));
+    } catch (err: any) {
+      const diag = diagnoseSupabaseError(err);
+
+      alert(
+        `❌ Failed to delete spare part from Supabase:\n\n` +
+        `${diag.message}\n\n` +
+        `👉 Solution: ${diag.actionableHint}`
+      );
     }
   };
-
   // ----------------------------------------------------
   // Render Login Gate
   // ----------------------------------------------------
@@ -2246,7 +2379,7 @@ export const Admin: React.FC = () => {
           ==================================================== */}
       {spareModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-trinex-border p-6 space-y-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-trinex-border p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 pb-2">
               <h3 className="font-bold text-base text-trinex-black">
                 {editingSpareId ? 'Edit Spare Part' : '+ Add Spare Part'}
@@ -2315,15 +2448,76 @@ export const Admin: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Image Path</label>
-                <input
-                  type="text"
-                  value={spareForm.image}
-                  onChange={(e) => setSpareForm({ ...spareForm, image: e.target.value })}
-                  placeholder="/assets/images/countertop_induction_hob.png"
-                  className="w-full px-3 py-2 text-xs rounded border border-gray-300 font-mono"
-                />
+              {/* Spare Part Photo Management */}
+              <div className="space-y-3 pt-2 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-gray-700">
+                    Spare Part Photo
+                  </label>
+                  <label className="cursor-pointer px-2.5 py-1 rounded bg-gray-100 hover:bg-gray-200 text-[11px] font-bold text-gray-700 flex items-center gap-1.5 transition-colors">
+                    <Upload className="w-3.5 h-3.5 text-trinex-red" />
+                    <span>Upload Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSpareImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {/* Selected Photo Live Preview */}
+                <div className="h-36 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center p-3 relative group shadow-inner">
+                  {spareForm.image ? (
+                    <img
+                      src={spareForm.image}
+                      alt="Spare Preview"
+                      className="max-h-full max-w-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/assets/images/countertop_induction_hob.png';
+                      }}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-gray-400 gap-1">
+                      <ImageIcon className="w-8 h-8 opacity-40" />
+                      <span className="text-xs">No photo selected</span>
+                    </div>
+                  )}
+                  <span className="absolute bottom-2 right-2 bg-black/75 text-white text-[10px] font-mono px-2 py-0.5 rounded backdrop-blur-xs">
+                    Photo Preview
+                  </span>
+                </div>
+
+                {/* Quick Add from Available Catalog Sample Images */}
+                <div>
+                  <span className="text-[11px] font-bold text-gray-500 block mb-1.5">
+                    Quick Pick from Sample Photos:
+                  </span>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                    {AVAILABLE_SAMPLE_IMAGES.map((sample, i) => {
+                      const isSelected = spareForm.image === sample;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setSpareForm({ ...spareForm, image: sample })}
+                          className={`w-14 h-14 rounded-lg border p-1 flex-shrink-0 bg-white transition-all ${
+                            isSelected
+                              ? 'border-trinex-red ring-2 ring-trinex-red/30 scale-105'
+                              : 'border-gray-200 hover:border-gray-400 opacity-80 hover:opacity-100'
+                          }`}
+                          title="Select sample photo"
+                        >
+                          <img
+                            src={sample}
+                            alt="Sample"
+                            className="w-full h-full object-contain"
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               <div className="pt-2 flex justify-end gap-2">

@@ -1,166 +1,72 @@
-import { SparePart } from '../types/product';
-import { slugify } from './productStore';
+import { SparePart, ProductSpec } from '../types/product';
+import { getSupabase, logSupabaseError } from './supabaseClient';
 
-export const INITIAL_SPARES: SparePart[] = [
-  {
-    id: 'spare-demo-1',
-    slug: 'commercial-induction-ceramic-glass-top-plate',
-    name: 'Commercial Induction Ceramic Glass Top Plate',
-    partNumber: 'TRX-IND-GLS-35',
-    compatibleEquipment: 'Commercial Induction Cooktop 3.5 kW & 5 kW Flat Models',
-    category: 'Commercial Induction',
-    image: '/assets/images/countertop_induction_hob.png',
-    shortDescription: 'High-temperature thermal shock resistant replacement microcrystalline ceramic glass plate with high mechanical load bearing capacity.',
-    specifications: [
-      { label: 'Surface Material', value: 'High-Grade Microcrystalline Glass' },
-      { label: 'Thermal Resistance', value: 'Up to 800°C' },
-      { label: 'Compatibility', value: 'Trinex 3.5kW / 5kW Flat Models' },
-      { label: 'Origin', value: 'Original Commercial Grade' }
-    ],
-    availability: 'in_stock',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'spare-demo-2',
-    slug: 'commercial-brass-burner-assembly',
-    name: 'High-Output Commercial Brass Burner Assembly',
-    partNumber: 'TX-SP-BRN-304',
-    compatibleEquipment: 'Commercial Gas Cooking Ranges & Chinese Wok Stations',
-    category: 'Cooking Spares',
-    image: '/assets/images/cooking_range.jpg',
-    shortDescription: 'Heavy cast brass burner head with precision drilled gas ports for maximum heat distribution and thermal stability.',
-    specifications: [
-      { label: 'Material', value: 'Heavy Cast Brass & Cast Iron' },
-      { label: 'Gas Rating', value: '30,000 BTU / hr' },
-      { label: 'Nozzle Diameter', value: '1.8 mm' },
-      { label: 'Applications', value: 'Gas Ranges, Wok Stations, Stock Pot Stoves' }
-    ],
-    availability: 'in_stock',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'spare-demo-3',
-    slug: 'digital-temperature-controller',
-    name: 'Digital Micro-Processor Temperature Controller',
-    partNumber: 'TX-SP-TC-900',
-    compatibleEquipment: 'Commercial Chillers, Freezers & Proofing Cabinets',
-    category: 'Electrical & Electronics',
-    image: '/assets/images/digital_induction_cooker.png',
-    shortDescription: 'High-precision digital thermostat controller with dual LED display, NTC/PTC sensor probe input, and alarm buzzer output.',
-    specifications: [
-      { label: 'Temp Range', value: '-50°C to +99°C' },
-      { label: 'Voltage', value: '220V AC ± 10%' },
-      { label: 'Sensor Included', value: '2m NTC Thermistor Probe' },
-      { label: 'Display', value: 'Dual LED 7-Segment Display' }
-    ],
-    availability: 'in_stock',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'spare-demo-4',
-    slug: 'commercial-refrigeration-compressor',
-    name: 'Commercial Refrigeration Hermetic Compressor',
-    partNumber: 'TX-SP-CMP-R290',
-    compatibleEquipment: 'Reach-In Chillers, Under-Counter Counters & Display Coolers',
-    category: 'Refrigeration Spares',
-    image: '/assets/images/commercial_refrigerator.jpg',
-    shortDescription: 'Hermetic reciprocating compressor engineered specifically for high-ambient commercial kitchen environments.',
-    specifications: [
-      { label: 'Displacement', value: '14.3 cc' },
-      { label: 'Refrigerant', value: 'R290 Eco Gas' },
-      { label: 'Power Rating', value: '1/2 HP' },
-      { label: 'Voltage', value: '220V - 240V / 50Hz' }
-    ],
-    availability: 'in_stock',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'spare-demo-5',
-    slug: 'electric-heating-element-3kw',
-    name: 'AISI 304 Stainless Steel Electric Heating Element',
-    partNumber: 'TX-SP-HTR-3KW',
-    compatibleEquipment: 'Commercial Deep Fryers, Bain-Maries & Steamer Cabinets',
-    category: 'Electrical & Heating',
-    image: '/assets/images/steamer_cabinet.png',
-    shortDescription: 'Incoloy 800 / SS 304 tubular heating element engineered for continuous duty in deep fryers and water bain-maries.',
-    specifications: [
-      { label: 'Wattage', value: '3000W / 4500W Options' },
-      { label: 'Voltage', value: '230V Single Phase / 415V 3-Phase' },
-      { label: 'Sheath Material', value: 'AISI 304 Food Grade Stainless Steel' },
-      { label: 'Terminal Type', value: 'M4 Threaded Screw Terminals' }
-    ],
-    availability: 'in_stock',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'spare-demo-6',
-    slug: 'food-grade-silicone-door-gasket-seal',
-    name: 'Food-Grade Silicone Magnetic Door Gasket Seal',
-    partNumber: 'TX-SP-GSK-CUSTOM',
-    compatibleEquipment: 'Vertical Chillers, Reach-In Freezers & Holding Cabinets',
-    category: 'Refrigeration & Oven Seals',
-    image: '/assets/images/holding_cabinet.png',
-    shortDescription: 'Press-fit high-elasticity magnetic gasket frame resistant to culinary oils, grease, and extreme thermal variation.',
-    specifications: [
-      { label: 'Material', value: 'Sanitary Grade Mold-Resistant PVC/Silicone' },
-      { label: 'Profile Type', value: 'Dart Push-In Profile' },
-      { label: 'Custom Sizing', value: 'Precision cut per door frame specification' }
-    ],
-    availability: 'in_stock',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-];
+const mapRowToSpare = (row: any): SparePart => ({
+  id: row.id,
+  name: row.name,
+  partNumber: row.part_number || '',
+  compatibleEquipment: row.compatible_equipment || '',
+  category: row.category || '',
+  image: row.image || '',
+  shortDescription: row.short_description || '',
+  specifications: Array.isArray(row.specifications)
+    ? row.specifications
+    : [],
+  availability: row.availability || 'in_stock',
+  status: row.status || 'active',
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
 
-const SPARES_STORAGE_KEY = 'trinex_spares_v4';
+const mapSpareToRow = (spare: Partial<SparePart>) => ({
+  ...(spare.id !== undefined && { id: spare.id }),
+  ...(spare.name !== undefined && { name: spare.name }),
+  ...(spare.partNumber !== undefined && { part_number: spare.partNumber }),
+  ...(spare.compatibleEquipment !== undefined && {
+    compatible_equipment: spare.compatibleEquipment,
+  }),
+  ...(spare.category !== undefined && { category: spare.category }),
+  ...(spare.image !== undefined && { image: spare.image }),
+  ...(spare.shortDescription !== undefined && {
+    short_description: spare.shortDescription,
+  }),
+  ...(spare.specifications !== undefined && {
+    specifications: spare.specifications,
+  }),
+  ...(spare.availability !== undefined && {
+    availability: spare.availability,
+  }),
+  ...(spare.status !== undefined && {
+    status: spare.status,
+  }),
+  updated_at: new Date().toISOString(),
+});
 
 class SparesStoreService {
   private spares: SparePart[] = [];
   private listeners: Array<() => void> = [];
+  private isInitialized = false;
 
   constructor() {
     this.init();
   }
 
-  private init() {
-    try {
-      const stored = localStorage.getItem(SPARES_STORAGE_KEY);
-      if (stored) {
-        this.spares = JSON.parse(stored);
-      } else {
-        this.spares = INITIAL_SPARES;
-        this.save();
-      }
-    } catch (e) {
-      console.warn('LocalStorage unavailable for spares, using default', e);
-      this.spares = INITIAL_SPARES;
-    }
-  }
+  private async init() {
+    if (this.isInitialized) return;
 
-  private save() {
-    try {
-      localStorage.setItem(SPARES_STORAGE_KEY, JSON.stringify(this.spares));
-    } catch (e) {
-      console.error('Failed to save spares', e);
-    }
-    this.notify();
+    this.isInitialized = true;
+
+    await this.fetchSpares();
+    this.setupRealtimeSubscription();
   }
 
   public subscribe(listener: () => void): () => void {
     this.listeners.push(listener);
+
     return () => {
-      this.listeners = this.listeners.filter((l) => l !== listener);
+      this.listeners = this.listeners.filter(
+        (item) => item !== listener
+      );
     };
   }
 
@@ -168,87 +74,331 @@ class SparesStoreService {
     this.listeners.forEach((listener) => {
       try {
         listener();
-      } catch (e) {
-        console.error('Spares listener error', e);
+      } catch (error) {
+        console.error('SparesStore listener error:', error);
       }
     });
   }
 
-  public getAllSpares(includeDrafts = false): SparePart[] {
-    if (includeDrafts) return [...this.spares];
-    return this.spares.filter((s) => s.status === 'active');
-  }
+  // ============================================================
+  // SUPABASE READ
+  // ============================================================
 
-  public getSpareById(id: string): SparePart | undefined {
-    return this.spares.find((s) => s.id === id);
-  }
+  public async fetchSpares(): Promise<SparePart[]> {
+    const supabase = getSupabase();
 
-  public getSpareBySlug(slug: string): SparePart | undefined {
-    const query = slug.toLowerCase().trim();
-    return this.spares.find((s) => {
-      const sSlug = (s.slug || slugify(s.name) || s.partNumber || s.id).toLowerCase();
-      const sPart = (s.partNumber || '').toLowerCase();
-      return (
-        sSlug === query ||
-        s.id.toLowerCase() === query ||
-        sPart === query ||
-        slugify(s.name) === query
+    if (!supabase) {
+      console.warn(
+        '⚠️ [Supabase:SparesStore] Supabase is not configured.'
       );
-    });
+
+      return this.spares;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('spares')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        const diagnosed = logSupabaseError(
+          'fetchSpares()',
+          error
+        );
+
+        console.warn(
+          `[Supabase:SparesStore] ${diagnosed.message} — ${diagnosed.actionableHint}`
+        );
+
+        return this.spares;
+      }
+
+      this.spares = (data || []).map(mapRowToSpare);
+
+      console.log(
+        `✅ [Supabase:SparesStore] Loaded ${this.spares.length} spares from Supabase.`
+      );
+
+      this.notify();
+
+      return this.spares;
+    } catch (error) {
+      logSupabaseError(
+        'fetchSpares() exception',
+        error
+      );
+
+      return this.spares;
+    }
   }
 
-  public getSparesByCategory(category: string): SparePart[] {
+  public async refresh(): Promise<void> {
+    await this.fetchSpares();
+  }
+
+  // ============================================================
+  // GETTERS
+  // ============================================================
+
+  public getAllSpares(includeInactive = false): SparePart[] {
+    if (includeInactive) {
+      return [...this.spares];
+    }
+
     return this.spares.filter(
-      (s) => s.status === 'active' && s.category.toLowerCase() === category.toLowerCase()
+      (spare) => spare.status === 'active'
     );
   }
 
-  public addSpare(spareData: Omit<SparePart, 'id' | 'createdAt' | 'updatedAt'>): SparePart {
-    const generatedSlug = spareData.slug
-      ? slugify(spareData.slug)
-      : slugify(`${spareData.name} ${spareData.partNumber}`);
+  public getSpareById(id: string): SparePart | undefined {
+    return this.spares.find((spare) => spare.id === id);
+  }
+public getSpareBySlug(
+  slug: string
+): SparePart | undefined {
+  return this.spares.find((spare) => {
+    const spareSlug = spare.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
 
-    const newSpare: SparePart = {
-      ...spareData,
-      id: `spare-${Date.now()}`,
-      slug: generatedSlug,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    return spareSlug === slug;
+  });
+}
+  // ============================================================
+  // ADD
+  // ============================================================
+
+public async addSpare(
+  spareData: Omit<
+    SparePart,
+    'id' | 'createdAt' | 'updatedAt'
+  >
+): Promise<SparePart> {
+  const now = new Date().toISOString();
+
+  const newSpare: SparePart = {
+    ...spareData,
+    id: `spare-${Date.now()}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+    const supabase = getSupabase();
+
+    if (supabase) {
+      const row = {
+        ...mapSpareToRow(newSpare),
+        created_at: now,
+        updated_at: now,
+      };
+
+      console.log(
+        ` [Supabase:SparesStore] Sending INSERT for spare "${newSpare.name}"...`,
+        row
+      );
+
+      const { data, error } = await supabase
+        .from('spares')
+        .insert([row])
+        .select()
+        .single();
+
+      if (error) {
+        const diagnosed = logSupabaseError(
+          `addSpare("${newSpare.name}")`,
+          error,
+          row
+        );
+
+        throw new Error(
+          `${diagnosed.message} — ${diagnosed.actionableHint}`
+        );
+      }
+
+      const saved = mapRowToSpare(data);
+
+      console.log(
+        `✅ [Supabase:SparesStore] Successfully inserted spare "${saved.name}" (${saved.id}).`
+      );
+
+      this.spares.unshift(saved);
+      this.notify();
+
+      return saved;
+    }
+
+    console.warn(
+      '⚠️ [Supabase:SparesStore] Supabase is not configured. Saving in memory only.'
+    );
+
     this.spares.unshift(newSpare);
-    this.save();
+    this.notify();
+
     return newSpare;
   }
 
-  public updateSpare(id: string, updates: Partial<SparePart>): SparePart | null {
-    const idx = this.spares.findIndex((s) => s.id === id);
-    if (idx === -1) return null;
+  // ============================================================
+  // UPDATE
+  // ============================================================
 
-    const current = this.spares[idx];
-    const updatedSlug = updates.slug
-      ? slugify(updates.slug)
-      : updates.name || updates.partNumber
-      ? slugify(`${updates.name || current.name} ${updates.partNumber || current.partNumber}`)
-      : current.slug;
+  public async updateSpare(
+    id: string,
+    updates: Partial<SparePart>
+  ): Promise<SparePart | null> {
+
+    const idx = this.spares.findIndex(
+      (spare) => spare.id === id
+    );
+
+    if (idx === -1) {
+      return null;
+    }
+
+    const supabase = getSupabase();
+
+    if (supabase) {
+      const row = mapSpareToRow(updates);
+
+      console.log(
+        `📤 [Supabase:SparesStore] Sending UPDATE for spare (${id})...`,
+        row
+      );
+
+      const { data, error } = await supabase
+        .from('spares')
+        .update(row)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        const diagnosed = logSupabaseError(
+          `updateSpare(ID: "${id}")`,
+          error,
+          row
+        );
+
+        throw new Error(
+          `${diagnosed.message} — ${diagnosed.actionableHint}`
+        );
+      }
+
+      const updated = mapRowToSpare(data);
+
+      console.log(
+        `✅ [Supabase:SparesStore] Successfully updated spare "${updated.name}".`
+      );
+
+      this.spares[idx] = updated;
+      this.notify();
+
+      return updated;
+    }
 
     this.spares[idx] = {
-      ...current,
+      ...this.spares[idx],
       ...updates,
-      slug: updatedSlug,
-      updatedAt: new Date().toISOString(),
     };
-    this.save();
+
+    this.notify();
+
     return this.spares[idx];
   }
 
-  public deleteSpare(id: string): boolean {
-    const initialLen = this.spares.length;
-    this.spares = this.spares.filter((s) => s.id !== id);
-    if (this.spares.length !== initialLen) {
-      this.save();
+  // ============================================================
+  // DELETE
+  // ============================================================
+
+  public async deleteSpare(id: string): Promise<boolean> {
+    const supabase = getSupabase();
+
+    if (supabase) {
+      console.log(
+        `📤 [Supabase:SparesStore] Sending DELETE for spare (${id})...`
+      );
+
+      const { error } = await supabase
+        .from('spares')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        const diagnosed = logSupabaseError(
+          `deleteSpare(ID: "${id}")`,
+          error
+        );
+
+        throw new Error(
+          `${diagnosed.message} — ${diagnosed.actionableHint}`
+        );
+      }
+
+      console.log(
+        `✅ [Supabase:SparesStore] Successfully deleted spare (${id}).`
+      );
+    }
+
+    const initialLength = this.spares.length;
+
+    this.spares = this.spares.filter(
+      (spare) => spare.id !== id
+    );
+
+    if (this.spares.length !== initialLength) {
+      this.notify();
       return true;
     }
+
     return false;
+  }
+
+  // ============================================================
+  // REALTIME
+  // ============================================================
+
+  private setupRealtimeSubscription() {
+    const supabase = getSupabase();
+
+    if (!supabase) {
+      return;
+    }
+
+    try {
+      const channel = supabase
+        .channel('trinex_spares_realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'spares',
+          },
+          () => {
+            console.log(
+              '⚡ [Supabase Realtime] Spare table changed. Refreshing...'
+            );
+
+            this.fetchSpares();
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log(
+              '🔌 [Supabase Realtime] Subscribed to spares.'
+            );
+          }
+        });
+
+      return channel;
+    } catch (error) {
+      console.warn(
+        '⚠️ [Supabase:SparesStore] Realtime subscription failed:',
+        error
+      );
+    }
   }
 }
 
