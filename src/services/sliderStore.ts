@@ -1,4 +1,10 @@
 import { HeroSlide } from '../types/product';
+import {
+  getSupabase,
+  mapRowToHeroSlide,
+  mapHeroSlideToRow,
+  logSupabaseError,
+} from './supabaseClient';
 
 export const INITIAL_SLIDES: HeroSlide[] = [
   {
@@ -52,9 +58,13 @@ const SLIDER_STORAGE_KEY = 'trinex_hero_slides_v2';
 class SliderStoreService {
   private slides: HeroSlide[] = [];
   private listeners: Array<() => void> = [];
+  private isLoadedFromRemote = false;
 
   constructor() {
     this.init();
+    // Fetch from Supabase as soon as client is ready
+    this.fetchFromSupabase();
+    this.setupRealtimeSubscription();
   }
 
   private init() {
@@ -64,7 +74,7 @@ class SliderStoreService {
         this.slides = JSON.parse(stored);
       } else {
         this.slides = INITIAL_SLIDES;
-        this.save();
+        this.saveToStorage();
       }
     } catch (e) {
       console.warn('LocalStorage unavailable for slider, using defaults', e);
@@ -72,13 +82,65 @@ class SliderStoreService {
     }
   }
 
-  private save() {
+  private saveToStorage() {
     try {
       localStorage.setItem(SLIDER_STORAGE_KEY, JSON.stringify(this.slides));
     } catch (e) {
       console.error('Failed to save slides to localStorage', e);
     }
     this.notify();
+  }
+
+  public async fetchFromSupabase(): Promise<void> {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('hero_slides')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (error) {
+        // Table might not exist yet if user hasn't run SQL script
+        logSupabaseError('fetchFromSupabase()', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        this.slides = data.map(mapRowToHeroSlide);
+        this.isLoadedFromRemote = true;
+        this.saveToStorage();
+      } else {
+        // Seed initial slides into Supabase so cloud database has the defaults
+        console.log('Seeding initial hero slides into Supabase...');
+        const rows = INITIAL_SLIDES.map(mapHeroSlideToRow);
+        await supabase.from('hero_slides').insert(rows);
+      }
+    } catch (err) {
+      console.warn('Could not sync hero slides with Supabase:', err);
+    }
+  }
+
+  private setupRealtimeSubscription() {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+      supabase
+        .channel('public:hero_slides')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'hero_slides' },
+          () => {
+            console.log('⚡ Hero slides updated in Supabase, refreshing...');
+            this.fetchFromSupabase();
+          }
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn('Realtime subscription for hero_slides failed', e);
+    }
   }
 
   public subscribe(listener: () => void): () => void {
@@ -107,39 +169,104 @@ class SliderStoreService {
     return this.slides.find((s) => s.id === id);
   }
 
-  public addSlide(slideData: Omit<HeroSlide, 'id' | 'createdAt'>): HeroSlide {
+  public async addSlide(slideData: Omit<HeroSlide, 'id' | 'createdAt'>): Promise<HeroSlide> {
     const newSlide: HeroSlide = {
       ...slideData,
       id: `slide-${Date.now()}`,
       displayOrder: slideData.displayOrder || this.slides.length + 1,
       createdAt: new Date().toISOString(),
     };
+
+    // Save locally immediately
     this.slides.push(newSlide);
-    this.save();
+    this.saveToStorage();
+
+    // Sync to Supabase
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const row = mapHeroSlideToRow(newSlide);
+        const { error } = await supabase.from('hero_slides').insert([row]);
+        if (error) {
+          logSupabaseError('addSlide()', error);
+        } else {
+          console.log(`✅ Slide "${newSlide.title || newSlide.id}" saved to Supabase!`);
+        }
+      } catch (err) {
+        console.error('Failed to sync new slide to Supabase', err);
+      }
+    }
+
     return newSlide;
   }
 
-  public updateSlide(id: string, updates: Partial<HeroSlide>): HeroSlide | null {
+  public async updateSlide(id: string, updates: Partial<HeroSlide>): Promise<HeroSlide | null> {
     const idx = this.slides.findIndex((s) => s.id === id);
     if (idx === -1) return null;
+
     this.slides[idx] = { ...this.slides[idx], ...updates };
-    this.save();
+    this.saveToStorage();
+
+    // Sync to Supabase
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const row = mapHeroSlideToRow(updates);
+        const { error } = await supabase.from('hero_slides').update(row).eq('id', id);
+        if (error) {
+          logSupabaseError(`updateSlide(${id})`, error);
+        }
+      } catch (err) {
+        console.error('Failed to update slide in Supabase', err);
+      }
+    }
+
     return this.slides[idx];
   }
 
-  public deleteSlide(id: string): boolean {
+  public async deleteSlide(id: string): Promise<boolean> {
     const initialLen = this.slides.length;
     this.slides = this.slides.filter((s) => s.id !== id);
+
     if (this.slides.length !== initialLen) {
-      this.save();
+      this.saveToStorage();
+
+      // Sync to Supabase
+      const supabase = getSupabase();
+      if (supabase) {
+        try {
+          const { error } = await supabase.from('hero_slides').delete().eq('id', id);
+          if (error) {
+            logSupabaseError(`deleteSlide(${id})`, error);
+          }
+        } catch (err) {
+          console.error('Failed to delete slide in Supabase', err);
+        }
+      }
       return true;
     }
+
     return false;
   }
 
-  public resetToDefault() {
+  public async resetToDefault() {
     this.slides = INITIAL_SLIDES;
-    this.save();
+    this.saveToStorage();
+
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('hero_slides').delete().neq('id', '___empty___');
+        const rows = INITIAL_SLIDES.map(mapHeroSlideToRow);
+        await supabase.from('hero_slides').insert(rows);
+      } catch (err) {
+        console.error('Failed to reset slides in Supabase', err);
+      }
+    }
+  }
+
+  public async refresh() {
+    await this.fetchFromSupabase();
   }
 }
 

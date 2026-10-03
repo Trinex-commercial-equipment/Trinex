@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Product, Category } from '../types/product';
+import { Product, Category, HeroSlide } from '../types/product';
 
 export const sanitizeSupabaseUrl = (url: string): string => {
   return (url || '').trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
@@ -253,6 +253,34 @@ export function mapCategoryToRow(cat: Partial<Category>): Record<string, any> {
   return row;
 }
 
+export function mapRowToHeroSlide(row: any): HeroSlide {
+  return {
+    id: String(row.id),
+    image: String(row.image || ''),
+    title: String(row.title || ''),
+    subtitle: String(row.subtitle || ''),
+    link: String(row.link || '/products'),
+    buttonText: String(row.button_text || 'Explore Range'),
+    displayOrder: row.display_order ?? 0,
+    status: (row.status as any) || 'active',
+    createdAt: row.created_at || new Date().toISOString(),
+  };
+}
+
+export function mapHeroSlideToRow(slide: Partial<HeroSlide>): Record<string, any> {
+  const row: Record<string, any> = {};
+  if (slide.id !== undefined) row.id = slide.id;
+  if (slide.image !== undefined) row.image = slide.image;
+  if (slide.title !== undefined) row.title = slide.title;
+  if (slide.subtitle !== undefined) row.subtitle = slide.subtitle;
+  if (slide.link !== undefined) row.link = slide.link;
+  if (slide.buttonText !== undefined) row.button_text = slide.buttonText;
+  if (slide.displayOrder !== undefined) row.display_order = slide.displayOrder;
+  if (slide.status !== undefined) row.status = slide.status;
+  row.updated_at = new Date().toISOString();
+  return row;
+}
+
 export const SUPABASE_SQL_SCHEMA = `-- ===================================================
 -- TRINEX EQUIPMENT PVT LTD - SUPABASE DATABASE SCHEMA
 -- Run this script in your Supabase SQL Editor
@@ -368,6 +396,20 @@ CREATE TABLE IF NOT EXISTS public.spare_requests (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 7. Hero Slides Table (Syncs Homepage Image Slider across all devices)
+CREATE TABLE IF NOT EXISTS public.hero_slides (
+  id TEXT PRIMARY KEY,
+  image TEXT NOT NULL,
+  title TEXT,
+  subtitle TEXT,
+  link TEXT DEFAULT '/products',
+  button_text TEXT DEFAULT 'Explore Range',
+  display_order INT DEFAULT 0,
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Enable RLS (Row Level Security)
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
@@ -375,6 +417,7 @@ ALTER TABLE public.spares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.service_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.spare_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.hero_slides ENABLE ROW LEVEL SECURITY;
 
 -- Clean up any existing policies
 DROP POLICY IF EXISTS "Public Full Access Products" ON public.products;
@@ -389,6 +432,7 @@ DROP POLICY IF EXISTS "Public Full Access Service Requests" ON public.service_re
 DROP POLICY IF EXISTS "Public Insert Service Requests" ON public.service_requests;
 DROP POLICY IF EXISTS "Public Full Access Spare Requests" ON public.spare_requests;
 DROP POLICY IF EXISTS "Public Insert Spare Requests" ON public.spare_requests;
+DROP POLICY IF EXISTS "Public Full Access Hero Slides" ON public.hero_slides;
 
 -- Enable Full Access Policies for anonymous / public client operations
 CREATE POLICY "Public Full Access Products" ON public.products FOR ALL USING (true) WITH CHECK (true);
@@ -397,4 +441,5 @@ CREATE POLICY "Public Full Access Spares" ON public.spares FOR ALL USING (true) 
 CREATE POLICY "Public Full Access Enquiries" ON public.enquiries FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Full Access Service Requests" ON public.service_requests FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Full Access Spare Requests" ON public.spare_requests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Full Access Hero Slides" ON public.hero_slides FOR ALL USING (true) WITH CHECK (true);
 `;
