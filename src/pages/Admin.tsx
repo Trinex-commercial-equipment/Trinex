@@ -28,7 +28,8 @@ import {
 import { productStore, slugify } from '../services/productStore';
 import { sparesStore } from '../services/sparesStore';
 import { enquiryStore } from '../services/enquiryStore';
-import { Product, Category, SparePart, ProductSpec, EnquiryStatus } from '../types/product';
+import { sliderStore } from '../services/sliderStore';
+import { Product, Category, SparePart, ProductSpec, EnquiryStatus, HeroSlide } from '../types/product';
 import {
   SUPABASE_SQL_SCHEMA,
   isSupabaseConfigured,
@@ -68,6 +69,21 @@ const CATEGORY_SAMPLE_IMAGES = [
   '/assets/images/commercial_refrigerator.jpg'
 ];
 
+const SLIDER_SAMPLE_IMAGES = [
+  { url: '/assets/images/trinex_induction_banner.jpg', label: 'Induction Hero Banner' },
+  { url: '/assets/images/category_induction.jpg', label: 'Commercial Induction' },
+  { url: '/assets/images/category_cooking.jpg', label: 'Commercial Cooking Ranges' },
+  { url: '/assets/images/category_refrigeration.jpg', label: 'Commercial Refrigeration' },
+  { url: '/assets/images/category_food_prep.jpg', label: 'Food Preparation Equipment' },
+  { url: '/assets/images/category_holding_steamer.jpg', label: 'Holding & Steamer Cabinet' },
+  { url: '/assets/images/cooking_range.jpg', label: 'Heavy Duty Cooking Range' },
+  { url: '/assets/images/commercial_refrigerator.jpg', label: 'Reach-In Chiller / Refrigerator' },
+  { url: '/assets/images/countertop_induction_hob.png', label: 'Countertop Induction Hob' },
+  { url: '/assets/images/chinese_wok_station.png', label: 'Chinese Wok Station' },
+  { url: '/assets/images/holding_cabinet.png', label: 'Holding Cabinet' },
+  { url: '/assets/images/steamer_cabinet.png', label: 'Steamer Cabinet' },
+];
+
 const IDEAL_FOR_OPTIONS = [
   'Restaurants',
   'Hotels',
@@ -90,13 +106,14 @@ export const Admin: React.FC = () => {
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'products' | 'categories' | 'spares' | 'enquiries' | 'services' | 'spare_requests' | 'settings'
+    'dashboard' | 'products' | 'categories' | 'spares' | 'slides' | 'enquiries' | 'services' | 'spare_requests' | 'settings'
   >('dashboard');
 
   // Live Data States
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [spares, setSpares] = useState<SparePart[]>([]);
+  const [slides, setSlides] = useState<HeroSlide[]>(() => sliderStore.getSlides(true));
   const [enquiries, setEnquiries] = useState(enquiryStore.getEnquiries());
   const [serviceRequests, setServiceRequests] = useState(enquiryStore.getServiceRequests());
   const [spareRequests, setSpareRequests] = useState(enquiryStore.getSpareRequests());
@@ -206,6 +223,27 @@ export const Admin: React.FC = () => {
     specifications: [{ label: 'Material', value: 'Ceramic Glass' }]
   });
 
+  // Hero Slider Editor Modal
+  const [slideModalOpen, setSlideModalOpen] = useState(false);
+  const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
+  const [slideForm, setSlideForm] = useState<{
+    image: string;
+    title: string;
+    subtitle: string;
+    link: string;
+    buttonText: string;
+    displayOrder: number;
+    status: 'active' | 'draft';
+  }>({
+    image: '/assets/images/trinex_induction_banner.jpg',
+    title: '',
+    subtitle: '',
+    link: '/products',
+    buttonText: 'Explore Range',
+    displayOrder: 1,
+    status: 'active'
+  });
+
   const [copiedSchema, setCopiedSchema] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -275,6 +313,7 @@ export const Admin: React.FC = () => {
     setProducts(productStore.getAllProducts(true));
     setCategories(productStore.getCategories());
     setSpares(sparesStore.getAllSpares(true));
+    setSlides(sliderStore.getSlides(true));
     setEnquiries(enquiryStore.getEnquiries());
     setServiceRequests(enquiryStore.getServiceRequests());
     setSpareRequests(enquiryStore.getSpareRequests());
@@ -284,10 +323,12 @@ export const Admin: React.FC = () => {
     refreshAllData();
     const unsubProd = productStore.subscribe(refreshAllData);
     const unsubSpares = sparesStore.subscribe(refreshAllData);
+    const unsubSlider = sliderStore.subscribe(refreshAllData);
     const unsubEnq = enquiryStore.subscribe(refreshAllData);
     return () => {
       unsubProd();
       unsubSpares();
+      unsubSlider();
       unsubEnq();
     };
   }, []);
@@ -772,6 +813,126 @@ export const Admin: React.FC = () => {
       );
     }
   };
+
+  // ----------------------------------------------------
+  // Hero Slider Operations
+  // ----------------------------------------------------
+  const handleOpenAddSlide = () => {
+    setEditingSlideId(null);
+    setSlideForm({
+      image: '/assets/images/trinex_induction_banner.jpg',
+      title: '',
+      subtitle: '',
+      link: '/products',
+      buttonText: 'Explore Range',
+      displayOrder: slides.length + 1,
+      status: 'active',
+    });
+    setSlideModalOpen(true);
+  };
+
+  const handleOpenEditSlide = (slide: HeroSlide) => {
+    setEditingSlideId(slide.id);
+    setSlideForm({
+      image: slide.image,
+      title: slide.title || '',
+      subtitle: slide.subtitle || '',
+      link: slide.link || '/products',
+      buttonText: slide.buttonText || 'Explore Range',
+      displayOrder: slide.displayOrder || 1,
+      status: slide.status,
+    });
+    setSlideModalOpen(true);
+  };
+
+  const handleSlideImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setSlideForm((prev) => ({
+          ...prev,
+          image: reader.result as string,
+        }));
+      }
+    };
+    reader.onerror = () => {
+      alert('Failed to read selected image file.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveSlide = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!slideForm.image.trim()) {
+      alert('Slide image is required. Please pick a sample image or upload a picture.');
+      return;
+    }
+
+    if (editingSlideId) {
+      sliderStore.updateSlide(editingSlideId, {
+        image: slideForm.image.trim(),
+        title: slideForm.title.trim(),
+        subtitle: slideForm.subtitle.trim(),
+        link: slideForm.link.trim() || '/products',
+        buttonText: slideForm.buttonText.trim() || 'Explore Range',
+        displayOrder: Number(slideForm.displayOrder) || 1,
+        status: slideForm.status,
+      });
+      showNotification('Slide updated successfully!');
+    } else {
+      sliderStore.addSlide({
+        image: slideForm.image.trim(),
+        title: slideForm.title.trim(),
+        subtitle: slideForm.subtitle.trim(),
+        link: slideForm.link.trim() || '/products',
+        buttonText: slideForm.buttonText.trim() || 'Explore Range',
+        displayOrder: Number(slideForm.displayOrder) || slides.length + 1,
+        status: slideForm.status,
+      });
+      showNotification('New slide added to homepage slider!');
+    }
+    setSlideModalOpen(false);
+  };
+
+  const handleDeleteSlide = (id: string, title?: string) => {
+    const label = title ? `"${title}"` : 'this slide';
+    if (window.confirm(`Are you sure you want to delete ${label} from the homepage slider?`)) {
+      sliderStore.deleteSlide(id);
+      showNotification('Slide removed from homepage slider.');
+    }
+  };
+
+  const handleToggleSlideStatus = (slide: HeroSlide) => {
+    const nextStatus = slide.status === 'active' ? 'draft' : 'active';
+    sliderStore.updateSlide(slide.id, { status: nextStatus });
+    showNotification(`Slide is now ${nextStatus === 'active' ? 'Active on homepage' : 'Draft (hidden)'}`);
+  };
+
+  const handleMoveSlideOrder = (slide: HeroSlide, direction: 'up' | 'down') => {
+    const sorted = [...slides].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    const currentIndex = sorted.findIndex((s) => s.id === slide.id);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+
+    const currentOrder = slide.displayOrder || currentIndex + 1;
+    const targetSlide = sorted[targetIndex];
+    const targetOrder = targetSlide.displayOrder || targetIndex + 1;
+
+    sliderStore.updateSlide(slide.id, { displayOrder: targetOrder });
+    sliderStore.updateSlide(targetSlide.id, { displayOrder: currentOrder });
+    showNotification('Slide order updated.');
+  };
+
   // ----------------------------------------------------
   // Render Login Gate
   // ----------------------------------------------------
@@ -849,9 +1010,13 @@ export const Admin: React.FC = () => {
       )}
 
       {/* Top Admin Bar */}
-      <div className="bg-trinex-black text-white px-4 sm:px-8 py-4 border-b border-gray-800 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-trinex-black text-white px-4 sm:px-8 py-3.5 border-b border-gray-800 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <img src="/assets/logo/trinex_official_logo.png" alt="Trinex" className="h-7 w-auto bg-white p-1 rounded" />
+          <img 
+            src="/assets/logo/trinex_official_logo.png" 
+            alt="Trinex" 
+            className="h-10 sm:h-11 w-auto object-contain bg-white/95 p-1.5 rounded-lg shadow-xs" 
+          />
           <div>
             <h1 className="text-sm font-black tracking-wide text-white uppercase">
               Management Portal
@@ -887,6 +1052,7 @@ export const Admin: React.FC = () => {
             { id: 'products', label: `Products (${products.length})`, icon: Package },
             { id: 'categories', label: `Categories (${categories.length})`, icon: Layers },
             { id: 'spares', label: `Spares (${spares.length})`, icon: Wrench },
+            { id: 'slides', label: `Hero Slider (${slides.length})`, icon: ImageIcon },
             { id: 'enquiries', label: `Enquiries (${enquiries.length})`, icon: MessageSquare },
             { id: 'services', label: `Service Requests (${serviceRequests.length})`, icon: Wrench },
             { id: 'spare_requests', label: `Spare Requests (${spareRequests.length})`, icon: Package },
@@ -998,6 +1164,14 @@ export const Admin: React.FC = () => {
                 >
                   <Plus className="w-4 h-4" />
                   <span>Create Category</span>
+                </button>
+
+                <button
+                  onClick={handleOpenAddSlide}
+                  className="px-4 py-2.5 rounded-lg border border-gray-300 hover:bg-gray-100 text-trinex-black font-bold text-xs flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Hero Slide</span>
                 </button>
               </div>
             </div>
@@ -1362,6 +1536,264 @@ export const Admin: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* ====================================================
+            HERO SLIDER TAB
+            ==================================================== */}
+        {activeTab === 'slides' && (
+          <div className="space-y-6">
+            {/* Header Card */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-trinex-border shadow-xs">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-black text-trinex-black uppercase tracking-wider">
+                    Homepage Hero Slider ({slides.length})
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                    {slides.filter((s) => s.status === 'active').length} Active
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1 max-w-2xl leading-relaxed">
+                  Manage the images, promotional banners, titles, and CTA links featured in the homepage slider. 
+                  On mobile devices, this slider appears directly at the very top. On desktop, it is showcased in the main hero display.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Reset the homepage slider back to factory default slides?')) {
+                      sliderStore.resetToDefault();
+                      showNotification('Homepage slider reset to defaults.');
+                    }
+                  }}
+                  className="px-3.5 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-gray-500" />
+                  <span>Reset Defaults</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenAddSlide}
+                  className="px-4 py-2 rounded-lg bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Add New Slide</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Explanatory Banner */}
+            <div className="bg-slate-900 text-white rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-red-600 flex items-center justify-center flex-shrink-0 text-white">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div className="text-xs">
+                  <span className="font-bold text-white block">Responsive Behavior Configured:</span>
+                  <span className="text-gray-300">
+                    • <strong>Mobile View:</strong> Direct interactive image carousel at top without text clutter.
+                    • <strong>Desktop View:</strong> High-impact slider with corporate matter and instant quote buttons.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => window.open('/', '_blank')}
+                className="px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-colors flex-shrink-0"
+              >
+                <span>Preview Homepage</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Quick Pick from Trinex Assets Drawer */}
+            <div className="bg-white p-5 rounded-xl border border-trinex-border shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-gray-700">
+                  Quick-Pick Available Image Assets (Click to Add as New Slide)
+                </h4>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">1-Click Fast Add</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {SLIDER_SAMPLE_IMAGES.map((sample, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      sliderStore.addSlide({
+                        image: sample.url,
+                        title: sample.label,
+                        subtitle: 'Commercial Heavy Duty Kitchen Equipment',
+                        link: '/products',
+                        buttonText: 'Explore Equipment',
+                        displayOrder: slides.length + 1,
+                        status: 'active'
+                      });
+                      showNotification(`Added "${sample.label}" to slider!`);
+                    }}
+                    className="group border border-gray-200 hover:border-trinex-red rounded-lg p-2 bg-gray-50 hover:bg-white flex flex-col items-center transition-all text-left shadow-2xs hover:shadow-xs"
+                    title={`Click to add "${sample.label}" to homepage slider`}
+                  >
+                    <div className="w-full h-20 bg-white rounded flex items-center justify-center overflow-hidden mb-1.5 border border-gray-100">
+                      <img src={sample.url} alt={sample.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    </div>
+                    <span className="text-[11px] font-bold text-gray-800 line-clamp-1 w-full text-center group-hover:text-trinex-red">
+                      {sample.label}
+                    </span>
+                    <span className="text-[9px] text-emerald-600 font-bold mt-0.5 flex items-center gap-0.5">
+                      <Plus className="w-2.5 h-2.5" /> Quick Add
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Slides List Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {slides
+                .slice()
+                .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                .map((slide, index) => {
+                  const isActive = slide.status === 'active';
+                  return (
+                    <div
+                      key={slide.id}
+                      className={`bg-white rounded-xl border transition-all shadow-xs overflow-hidden flex flex-col justify-between ${
+                        isActive ? 'border-trinex-border' : 'border-dashed border-gray-300 opacity-75'
+                      }`}
+                    >
+                      {/* Top Preview Image */}
+                      <div>
+                        <div className="relative h-48 bg-slate-900 overflow-hidden flex items-center justify-center group">
+                          <img
+                            src={slide.image}
+                            alt={slide.title || 'Slide'}
+                            className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/assets/images/trinex_induction_banner.jpg';
+                            }}
+                          />
+                          
+                          {/* Order Badge */}
+                          <div className="absolute top-3 left-3 bg-white/95 text-slate-900 font-mono font-black text-xs px-2.5 py-1 rounded shadow-md backdrop-blur-xs flex items-center gap-1">
+                            <span>#{index + 1}</span>
+                            <span className="text-[10px] text-gray-500 font-sans font-bold">(Order: {slide.displayOrder})</span>
+                          </div>
+
+                          {/* Status Badge */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSlideStatus(slide)}
+                            className={`absolute top-3 right-3 text-xs font-black px-2.5 py-1 rounded shadow-md transition-all flex items-center gap-1 ${
+                              isActive
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                            }`}
+                            title="Click to toggle Active / Draft"
+                          >
+                            <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-white' : 'bg-gray-400'}`} />
+                            <span>{isActive ? 'Active on Site' : 'Draft (Hidden)'}</span>
+                          </button>
+                        </div>
+
+                        {/* Slide Details */}
+                        <div className="p-4 space-y-2.5 text-xs text-left">
+                          <div className="flex items-center justify-between text-gray-500 border-b border-gray-100 pb-2">
+                            <span className="font-semibold text-gray-700">Button Label:</span>
+                            <span className="font-bold text-trinex-black bg-gray-100 px-2 py-0.5 rounded">
+                              {slide.buttonText || 'Explore'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-gray-500 border-b border-gray-100 pb-2">
+                            <span className="font-semibold text-gray-700">Link Target:</span>
+                            <span className="font-mono text-[11px] text-slate-800 bg-gray-100 px-2 py-0.5 rounded truncate max-w-[200px]">
+                              {slide.link || '/products'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-gray-500">
+                            <span className="font-semibold text-gray-700">Image Source:</span>
+                            <span className="font-mono text-[10px] text-gray-500 truncate max-w-[220px]" title={slide.image}>
+                              {slide.image.startsWith('data:') ? 'Custom Upload (Data URL)' : slide.image}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Footer Actions */}
+                      <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                        {/* Order adjustment */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => handleMoveSlideOrder(slide, 'up')}
+                            className="px-2 py-1 bg-white border border-gray-200 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none"
+                            title="Move Up"
+                          >
+                            ▲ Up
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === slides.length - 1}
+                            onClick={() => handleMoveSlideOrder(slide, 'down')}
+                            className="px-2 py-1 bg-white border border-gray-200 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none"
+                            title="Move Down"
+                          >
+                            ▼ Down
+                          </button>
+                        </div>
+
+                        {/* Edit and Delete */}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditSlide(slide)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                            title="Edit Slide Content & Image"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSlide(slide.id, slide.title)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-trinex-red bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                            title="Delete Slide"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {slides.length === 0 && (
+              <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center space-y-4">
+                <ImageIcon className="w-12 h-12 text-gray-300 mx-auto" />
+                <h4 className="text-sm font-bold text-gray-700">No Hero Slides Configured</h4>
+                <p className="text-xs text-gray-500 max-w-md mx-auto">
+                  Add slides or click "Reset Defaults" to restore the standard commercial equipment banners.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleOpenAddSlide}
+                  className="px-4 py-2 rounded-lg bg-trinex-red text-white text-xs font-bold uppercase tracking-wider"
+                >
+                  + Add First Slide
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -2535,6 +2967,248 @@ export const Admin: React.FC = () => {
                   Save Spare Part
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================
+          HERO SLIDE MODAL (ADD / EDIT)
+          ==================================================== */}
+      {slideModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-trinex-border p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <span className="text-[10px] font-black text-trinex-red uppercase tracking-wider block">
+                  Homepage Carousel
+                </span>
+                <h3 className="font-black text-base text-trinex-black">
+                  {editingSlideId ? 'Edit Hero Slide' : '+ Add New Hero Slide'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSlideModalOpen(false)}
+                className="p-1 rounded text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSlide} className="space-y-5 text-left">
+              
+              {/* 1. Image Selection Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-gray-800">
+                    Slide Image <span className="text-trinex-red">*</span>
+                  </label>
+                  <label className="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] flex items-center gap-1.5 transition-colors shadow-xs">
+                    <Upload className="w-3.5 h-3.5 text-trinex-red" />
+                    <span>Upload from Computer</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSlideImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {/* Selected Image Live Preview */}
+                <div className="relative h-44 rounded-xl overflow-hidden border border-gray-300 bg-slate-950 flex items-center justify-center shadow-inner group">
+                  {slideForm.image ? (
+                    <img
+                      src={slideForm.image}
+                      alt="Slide preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/assets/images/trinex_induction_banner.jpg';
+                      }}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-gray-400 gap-1">
+                      <ImageIcon className="w-8 h-8 opacity-40" />
+                      <span className="text-xs">No image selected</span>
+                    </div>
+                  )}
+                  <span className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-mono px-2 py-0.5 rounded backdrop-blur-xs">
+                    Live Preview
+                  </span>
+                </div>
+
+                {/* Direct Image URL input */}
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 mb-1">
+                    Image Path or Public URL:
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={slideForm.image}
+                    onChange={(e) => setSlideForm({ ...slideForm, image: e.target.value })}
+                    placeholder="/assets/images/trinex_induction_banner.jpg"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 font-mono focus:outline-none focus:border-trinex-red"
+                  />
+                </div>
+
+                {/* Quick Select from Pre-loaded Assets Grid */}
+                <div>
+                  <span className="text-[11px] font-bold text-gray-600 block mb-1.5">
+                    Or Click to Select from Available Trinex Equipment Images:
+                  </span>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1.5 border border-gray-200 rounded-lg bg-gray-50 scrollbar-thin">
+                    {SLIDER_SAMPLE_IMAGES.map((sample, idx) => {
+                      const isSelected = slideForm.image === sample.url;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setSlideForm((prev) => ({
+                              ...prev,
+                              image: sample.url,
+                              title: prev.title || sample.label,
+                            }));
+                          }}
+                          className={`relative rounded-lg border p-1 text-left transition-all bg-white flex flex-col items-center ${
+                            isSelected
+                              ? 'border-trinex-red ring-2 ring-trinex-red/30 shadow-xs'
+                              : 'border-gray-200 hover:border-gray-400 opacity-80 hover:opacity-100'
+                          }`}
+                          title={`Select ${sample.label}`}
+                        >
+                          <div className="w-full h-12 rounded overflow-hidden mb-1 bg-slate-900 flex items-center justify-center">
+                            <img src={sample.url} alt={sample.label} className="w-full h-full object-cover" />
+                          </div>
+                          <span className="text-[9px] font-bold text-gray-700 truncate w-full text-center">
+                            {sample.label}
+                          </span>
+                          {isSelected && (
+                            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-trinex-red text-white flex items-center justify-center text-[10px]">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Slide Content & Captions */}
+              <div className="space-y-3 pt-3 border-t border-gray-100">
+                <h4 className="text-xs font-black uppercase tracking-wider text-gray-400">
+                  Slide Captions & Button Actions
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Slide Heading / Title
+                    </label>
+                    <input
+                      type="text"
+                      value={slideForm.title}
+                      onChange={(e) => setSlideForm({ ...slideForm, title: e.target.value })}
+                      placeholder="e.g. Commercial Induction Equipment"
+                      className="w-full px-3 py-2 text-xs rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Subtitle / Tagline
+                    </label>
+                    <input
+                      type="text"
+                      value={slideForm.subtitle}
+                      onChange={(e) => setSlideForm({ ...slideForm, subtitle: e.target.value })}
+                      placeholder="e.g. Smart Cooking • High Efficiency"
+                      className="w-full px-3 py-2 text-xs rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Button Text
+                    </label>
+                    <input
+                      type="text"
+                      value={slideForm.buttonText}
+                      onChange={(e) => setSlideForm({ ...slideForm, buttonText: e.target.value })}
+                      placeholder="e.g. Explore Equipment"
+                      className="w-full px-3 py-2 text-xs rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Target Link
+                    </label>
+                    <input
+                      type="text"
+                      value={slideForm.link}
+                      onChange={(e) => setSlideForm({ ...slideForm, link: e.target.value })}
+                      placeholder="e.g. /products or /products?category=commercial-induction"
+                      className="w-full px-3 py-2 text-xs rounded border border-gray-300 font-mono focus:outline-none focus:border-trinex-red"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Display Order (Sequence)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={slideForm.displayOrder}
+                      onChange={(e) => setSlideForm({ ...slideForm, displayOrder: parseInt(e.target.value) || 1 })}
+                      className="w-full px-3 py-2 text-xs rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Status / Visibility
+                    </label>
+                    <select
+                      value={slideForm.status}
+                      onChange={(e) => setSlideForm({ ...slideForm, status: e.target.value as 'active' | 'draft' })}
+                      className="w-full px-3 py-2 text-xs rounded border border-gray-300 bg-white focus:outline-none focus:border-trinex-red"
+                    >
+                      <option value="active">Active (Visible in homepage slider)</option>
+                      <option value="draft">Draft (Hidden from homepage)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setSlideModalOpen(false)}
+                  className="px-4 py-2 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-lg bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition-colors"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{editingSlideId ? 'Save Changes' : 'Add Slide'}</span>
+                </button>
+              </div>
+
             </form>
           </div>
         </div>

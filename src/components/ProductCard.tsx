@@ -61,26 +61,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenQuoteMo
 
           {/* Product Name */}
           <Link to={`/products/${product.slug}`} className="block group-hover:text-trinex-red transition-colors">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug line-clamp-2">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug line-clamp-2 min-h-[44px]">
               {product.name}
             </h3>
           </Link>
 
           {/* Model */}
-          {product.model && (
-            <div className="inline-block bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-0.5 rounded">
-              Model: <span className="text-slate-900 font-bold">{product.model}</span>
-            </div>
-          )}
+          <div className="min-h-[26px]">
+            {product.model ? (
+              <span className="inline-block bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-0.5 rounded">
+                Model: <span className="text-slate-900 font-bold">{product.model}</span>
+              </span>
+            ) : (
+              <span className="inline-block text-transparent text-xs select-none">
+                Model: None
+              </span>
+            )}
+          </div>
 
           {/* Short Description */}
-          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-            {product.shortDescription}
+          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed min-h-[34px]">
+            {product.shortDescription || 'Commercial grade heavy-duty kitchen equipment.'}
           </p>
         </div>
 
         {/* Buttons / CTAs */}
-        <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-slate-100">
+        <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-slate-100">
           <Link
             to={`/products/${product.slug}`}
             className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors"

@@ -95,18 +95,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenQuoteModal }) => {
         <nav
           className={`w-full bg-white transition-all duration-200 border-b ${
             isScrolled
-              ? 'py-2.5 shadow-card border-slate-200'
-              : 'py-3.5 border-slate-200'
+              ? 'py-2 shadow-card border-slate-200'
+              : 'py-2.5 sm:py-3 border-slate-200'
           }`}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
             
             {/* Logo */}
-            <Link to="/" className="flex items-center flex-shrink-0 group">
+            <Link to="/" className="flex items-center flex-shrink-0 group py-0.5">
               <img
                 src="/assets/logo/trinex_official_logo.png"
                 alt="Trinex Equipment Pvt Ltd"
-                className="h-10 sm:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-102"
+                className="h-12 sm:h-14 lg:h-16 w-auto object-contain transition-transform duration-200 group-hover:scale-102"
               />
             </Link>
 

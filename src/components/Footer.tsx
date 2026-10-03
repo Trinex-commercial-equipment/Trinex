@@ -12,11 +12,11 @@ export const Footer: React.FC = () => {
           
           {/* Column 1: Brand & Tagline */}
           <div className="space-y-4">
-            <Link to="/" className="inline-block bg-white p-2 rounded">
+            <Link to="/" className="inline-block bg-white/95 hover:bg-white p-3 rounded-xl shadow-xs transition-all group">
               <img 
                 src="/assets/logo/trinex_official_logo.png" 
                 alt="Trinex Equipment Pvt Ltd" 
-                className="h-10 w-auto object-contain"
+                className="h-14 sm:h-16 w-auto object-contain transition-transform duration-200 group-hover:scale-102"
               />
             </Link>
 

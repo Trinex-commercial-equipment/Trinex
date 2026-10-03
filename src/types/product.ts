@@ -116,3 +116,16 @@ export interface SpareRequest {
   status: EnquiryStatus;
   createdAt: string;
 }
+
+export interface HeroSlide {
+  id: string;
+  image: string;
+  title?: string;
+  subtitle?: string;
+  link?: string;
+  buttonText?: string;
+  displayOrder?: number;
+  status: 'active' | 'draft';
+  createdAt?: string;
+}
+
