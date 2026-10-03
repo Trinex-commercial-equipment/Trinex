@@ -266,7 +266,10 @@ export const Admin: React.FC = () => {
         });
         return;
       }
-      const { data, error } = await client.from('products').select('id').limit(1);
+      const { data: prodData, error: prodError } = await client.from('products').select('id').limit(1);
+      const { data: slideData, error: slideError } = await client.from('hero_slides').select('id').limit(1);
+      
+      const error = prodError || slideError;
       if (error) {
         const diag = diagnoseSupabaseError(error);
         setTestResult({
@@ -276,7 +279,7 @@ export const Admin: React.FC = () => {
       } else {
         setTestResult({
           success: true,
-          message: `Connected successfully to Supabase! The "products" table is active and accessible (${data ? data.length : 0} records fetched).`,
+          message: `Connected successfully to Supabase! Both "products" and "hero_slides" tables are active and accessible in the cloud.`,
         });
       }
     } catch (e: any) {
@@ -296,6 +299,8 @@ export const Admin: React.FC = () => {
     setIsDbConnected(ok);
     if (ok) {
       await productStore.refresh();
+      await sliderStore.refresh();
+      refreshAllData();
       showNotification('Supabase configuration saved & connected!');
       handleTestConnection();
     } else {
