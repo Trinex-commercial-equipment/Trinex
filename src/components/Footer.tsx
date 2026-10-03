@@ -14,6 +14,7 @@ export const Footer: React.FC = () => {
           <div className="space-y-4">
             <Link to="/" className="inline-block bg-white/95 hover:bg-white p-3 rounded-xl shadow-xs transition-all group">
               <img 
+              
                 src="/assets/logo/trinex_official_logo.png" 
                 alt="Trinex Equipment Pvt Ltd" 
                 className="h-14 sm:h-16 w-auto object-contain transition-transform duration-200 group-hover:scale-102"
