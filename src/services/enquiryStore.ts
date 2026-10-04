@@ -38,7 +38,7 @@ class EnquiryStoreService {
       localStorage.setItem(SERVICES_KEY, JSON.stringify(this.serviceRequests));
       localStorage.setItem(SPARE_REQUESTS_KEY, JSON.stringify(this.spareRequests));
     } catch (err) {
-      console.error('Failed to save enquiries', err);
+      console.error('Failed to save enquiries to localStorage', err);
     }
     this.notify();
   }
@@ -54,47 +54,113 @@ class EnquiryStoreService {
     this.listeners.forEach((l) => l());
   }
 
-  // ==========================================
-  // SUPABASE CLOUD SYNC FOR QUOTES / ENQUIRIES
-  // ==========================================
+  // ============================================================
+  // SUPABASE CLOUD SYNC FOR ALL THREE REQUEST TYPES
+  // ============================================================
 
   public async fetchFromSupabase(): Promise<void> {
     const supabase = getSupabase();
     if (!supabase) return;
 
+    // 1. Fetch Enquiries from public.enquiries (and quotes)
     try {
-      const { data, error } = await supabase
-        .from('quotes')
+      const { data: enqData, error: enqError } = await supabase
+        .from('enquiries')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        logSupabaseError('fetchQuotesFromSupabase()', error);
-        return;
-      }
-
-      if (data && data.length > 0) {
-        this.enquiries = data.map((row: any) => ({
+      if (enqError) {
+        logSupabaseError('fetchEnquiries()', enqError);
+      } else if (enqData && enqData.length > 0) {
+        this.enquiries = enqData.map((row: any) => ({
           id: row.id,
-          name: row.customer_name || 'Anonymous',
-          phone: row.phone || '',
+          name: row.name,
+          phone: row.phone,
           company: row.company || '',
-          city: row.notes?.match(/City:\s*([^\n,)]+)/)?.[1] || 'Hyderabad',
-          productName: Array.isArray(row.products) && row.products[0]?.name ? row.products[0].name : 'General Equipment Inquiry',
-          message: row.notes || '',
+          city: row.city || 'Hyderabad',
+          productName: row.product_name || 'General Equipment Inquiry',
+          model: row.model || '',
+          message: row.message || '',
           status: (row.status as EnquiryStatus) || 'new',
           createdAt: row.created_at || new Date().toISOString(),
         }));
         this.save();
       } else if (this.enquiries.length > 0) {
-        // If Supabase table is empty but we have local enquiries, sync them up!
-        console.log('Syncing local enquiries to Supabase quotes table...');
-        for (const enq of this.enquiries) {
-          await this.insertToSupabase(enq);
+        // Upload local offline enquiries to Supabase
+        for (const item of this.enquiries) {
+          await this.syncEnquiryToSupabase(item);
         }
       }
     } catch (err) {
-      console.warn('Could not fetch quotes from Supabase:', err);
+      console.warn('Could not fetch enquiries from Supabase:', err);
+    }
+
+    // 2. Fetch Service Requests from public.service_requests
+    try {
+      const { data: srvData, error: srvError } = await supabase
+        .from('service_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (srvError) {
+        logSupabaseError('fetchServiceRequests()', srvError);
+      } else if (srvData && srvData.length > 0) {
+        this.serviceRequests = srvData.map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          mobile: row.mobile,
+          businessName: row.business_name || '',
+          city: row.city || 'Hyderabad',
+          serviceRequired: row.service_required || 'Repair',
+          equipmentBrandModel: row.equipment_brand_model || '',
+          describeIssue: row.describe_issue || '',
+          status: (row.status as EnquiryStatus) || 'new',
+          createdAt: row.created_at || new Date().toISOString(),
+        }));
+        this.save();
+      } else if (this.serviceRequests.length > 0) {
+        // Upload local offline service requests to Supabase
+        for (const item of this.serviceRequests) {
+          await this.syncServiceRequestToSupabase(item);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch service requests from Supabase:', err);
+    }
+
+    // 3. Fetch Spare Requests from public.spare_requests
+    try {
+      const { data: sprData, error: sprError } = await supabase
+        .from('spare_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (sprError) {
+        logSupabaseError('fetchSpareRequests()', sprError);
+      } else if (sprData && sprData.length > 0) {
+        this.spareRequests = sprData.map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          mobile: row.mobile,
+          businessName: row.business_name || '',
+          city: row.city || 'Hyderabad',
+          equipmentBrand: row.equipment_brand || 'Trinex',
+          equipmentModel: row.equipment_model || '',
+          sparePartRequired: row.spare_part_required || 'Spare Part',
+          partNumber: row.part_number || '',
+          additionalDetails: row.additional_details || '',
+          status: (row.status as EnquiryStatus) || 'new',
+          createdAt: row.created_at || new Date().toISOString(),
+        }));
+        this.save();
+      } else if (this.spareRequests.length > 0) {
+        // Upload local offline spare requests to Supabase
+        for (const item of this.spareRequests) {
+          await this.syncSpareRequestToSupabase(item);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch spare requests from Supabase:', err);
     }
   }
 
@@ -104,54 +170,101 @@ class EnquiryStoreService {
 
     try {
       supabase
-        .channel('public:quotes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'quotes' },
-          () => {
-            console.log('⚡ Quotes updated in Supabase, refreshing...');
-            this.fetchFromSupabase();
-          }
-        )
+        .channel('public:enquiry_suite_realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'enquiries' }, () => {
+          console.log('⚡ Enquiries table changed in Supabase. Refreshing...');
+          this.fetchFromSupabase();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'service_requests' }, () => {
+          console.log('⚡ Service requests table changed in Supabase. Refreshing...');
+          this.fetchFromSupabase();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'spare_requests' }, () => {
+          console.log('⚡ Spare requests table changed in Supabase. Refreshing...');
+          this.fetchFromSupabase();
+        })
         .subscribe();
     } catch (err) {
-      console.warn('Realtime quotes subscription error:', err);
+      console.warn('Realtime enquiry subscription error:', err);
     }
   }
 
-  private async insertToSupabase(item: ProductEnquiry) {
+  // ----------------------------------------------------
+  // Sync Helpers
+  // ----------------------------------------------------
+  private async syncEnquiryToSupabase(item: ProductEnquiry) {
     const supabase = getSupabase();
     if (!supabase) return;
-
     try {
-      const emailMatch = item.message?.match(/Email:\s*([^\s)]+)/i);
-      const email = emailMatch ? emailMatch[1] : '';
-
       const row = {
         id: item.id,
-        customer_name: item.name,
-        email: email || `${item.phone.replace(/\D/g, '')}@lead.trinex.in`,
+        name: item.name,
         phone: item.phone,
         company: item.company || '',
-        products: item.productName ? [{ name: item.productName, model: item.model || '' }] : [],
-        status: item.status || 'pending',
-        notes: item.message || '',
+        city: item.city || 'Hyderabad',
+        product_name: item.productName || '',
+        model: item.model || '',
+        message: item.message || '',
+        status: item.status || 'new',
         created_at: item.createdAt || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       };
-
-      const { error } = await supabase.from('quotes').upsert(row, { onConflict: 'id' });
-      if (error) {
-        logSupabaseError('insertToSupabase(quotes)', error, row);
-      } else {
-        console.log('✅ Quote successfully synced to Supabase cloud!');
-      }
+      await supabase.from('enquiries').upsert(row, { onConflict: 'id' });
     } catch (e) {
-      console.error('Supabase quote insertion error:', e);
+      console.error('Failed to sync enquiry to Supabase', e);
     }
   }
 
-  // Quote Enquiries
+  private async syncServiceRequestToSupabase(item: ServiceRequest) {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    try {
+      const row = {
+        id: item.id,
+        name: item.name,
+        mobile: item.mobile,
+        business_name: item.businessName || '',
+        city: item.city || 'Hyderabad',
+        service_required: item.serviceRequired || 'Repair',
+        equipment_brand_model: item.equipmentBrandModel || '',
+        describe_issue: item.describeIssue || '',
+        status: item.status || 'new',
+        created_at: item.createdAt || new Date().toISOString(),
+      };
+      await supabase.from('service_requests').upsert(row, { onConflict: 'id' });
+    } catch (e) {
+      console.error('Failed to sync service request to Supabase', e);
+    }
+  }
+
+  private async syncSpareRequestToSupabase(item: SpareRequest) {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    try {
+      const row = {
+        id: item.id,
+        name: item.name,
+        mobile: item.mobile,
+        business_name: item.businessName || '',
+        city: item.city || 'Hyderabad',
+        equipment_brand: item.equipmentBrand || 'Trinex',
+        equipment_model: item.equipmentModel || '',
+        spare_part_required: item.sparePartRequired || 'Spare Part',
+        part_number: item.partNumber || '',
+        additional_details: item.additionalDetails || '',
+        status: item.status || 'new',
+        created_at: item.createdAt || new Date().toISOString(),
+      };
+      await supabase.from('spare_requests').upsert(row, { onConflict: 'id' });
+    } catch (e) {
+      console.error('Failed to sync spare request to Supabase', e);
+    }
+  }
+
+  // ============================================================
+  // PUBLIC CRUD METHODS
+  // ============================================================
+
+  // --- Quote / Product Enquiries ---
   public getEnquiries(): ProductEnquiry[] {
     return [...this.enquiries].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
@@ -165,10 +278,7 @@ class EnquiryStoreService {
     };
     this.enquiries.unshift(item);
     this.save();
-
-    // Async push to Supabase
-    this.insertToSupabase(item);
-
+    this.syncEnquiryToSupabase(item);
     return item;
   }
 
@@ -177,13 +287,12 @@ class EnquiryStoreService {
     if (item) {
       item.status = status;
       this.save();
-
       const supabase = getSupabase();
       if (supabase) {
         try {
-          await supabase.from('quotes').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+          await supabase.from('enquiries').update({ status }).eq('id', id);
         } catch (e) {
-          console.error('Failed to update quote status in Supabase:', e);
+          console.error('Failed to update enquiry status in Supabase:', e);
         }
       }
     }
@@ -192,18 +301,17 @@ class EnquiryStoreService {
   public async deleteEnquiry(id: string) {
     this.enquiries = this.enquiries.filter((e) => e.id !== id);
     this.save();
-
     const supabase = getSupabase();
     if (supabase) {
       try {
-        await supabase.from('quotes').delete().eq('id', id);
+        await supabase.from('enquiries').delete().eq('id', id);
       } catch (e) {
-        console.error('Failed to delete quote in Supabase:', e);
+        console.error('Failed to delete enquiry from Supabase:', e);
       }
     }
   }
 
-  // Service Requests
+  // --- Service Requests ---
   public getServiceRequests(): ServiceRequest[] {
     return [...this.serviceRequests].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
@@ -217,23 +325,40 @@ class EnquiryStoreService {
     };
     this.serviceRequests.unshift(item);
     this.save();
+    this.syncServiceRequestToSupabase(item);
     return item;
   }
 
-  public updateServiceRequestStatus(id: string, status: EnquiryStatus) {
+  public async updateServiceRequestStatus(id: string, status: EnquiryStatus) {
     const item = this.serviceRequests.find((s) => s.id === id);
     if (item) {
       item.status = status;
       this.save();
+      const supabase = getSupabase();
+      if (supabase) {
+        try {
+          await supabase.from('service_requests').update({ status }).eq('id', id);
+        } catch (e) {
+          console.error('Failed to update service request status in Supabase:', e);
+        }
+      }
     }
   }
 
-  public deleteServiceRequest(id: string) {
+  public async deleteServiceRequest(id: string) {
     this.serviceRequests = this.serviceRequests.filter((s) => s.id !== id);
     this.save();
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('service_requests').delete().eq('id', id);
+      } catch (e) {
+        console.error('Failed to delete service request from Supabase:', e);
+      }
+    }
   }
 
-  // Spare Requests
+  // --- Spare Requests ---
   public getSpareRequests(): SpareRequest[] {
     return [...this.spareRequests].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
@@ -247,20 +372,37 @@ class EnquiryStoreService {
     };
     this.spareRequests.unshift(item);
     this.save();
+    this.syncSpareRequestToSupabase(item);
     return item;
   }
 
-  public updateSpareRequestStatus(id: string, status: EnquiryStatus) {
+  public async updateSpareRequestStatus(id: string, status: EnquiryStatus) {
     const item = this.spareRequests.find((s) => s.id === id);
     if (item) {
       item.status = status;
       this.save();
+      const supabase = getSupabase();
+      if (supabase) {
+        try {
+          await supabase.from('spare_requests').update({ status }).eq('id', id);
+        } catch (e) {
+          console.error('Failed to update spare request status in Supabase:', e);
+        }
+      }
     }
   }
 
-  public deleteSpareRequest(id: string) {
+  public async deleteSpareRequest(id: string) {
     this.spareRequests = this.spareRequests.filter((s) => s.id !== id);
     this.save();
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('spare_requests').delete().eq('id', id);
+      } catch (e) {
+        console.error('Failed to delete spare request from Supabase:', e);
+      }
+    }
   }
 
   public async refresh() {

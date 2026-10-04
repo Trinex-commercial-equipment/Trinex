@@ -299,7 +299,9 @@ export const Admin: React.FC = () => {
     setIsDbConnected(ok);
     if (ok) {
       await productStore.refresh();
+      await sparesStore.refresh();
       await sliderStore.refresh();
+      await enquiryStore.refresh();
       refreshAllData();
       showNotification('Supabase configuration saved & connected!');
       handleTestConnection();
@@ -325,6 +327,10 @@ export const Admin: React.FC = () => {
   };
 
   useEffect(() => {
+    productStore.refresh();
+    sparesStore.refresh();
+    sliderStore.refresh();
+    enquiryStore.refresh();
     refreshAllData();
     const unsubProd = productStore.subscribe(refreshAllData);
     const unsubSpares = sparesStore.subscribe(refreshAllData);
