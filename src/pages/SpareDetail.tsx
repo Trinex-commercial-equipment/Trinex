@@ -16,7 +16,7 @@ import {
   Sparkles,
   Truck
 } from 'lucide-react';
-import { sparesStore } from '../services/sparesStore';
+import { sparesStore, getSpareSlug } from '../services/sparesStore';
 import { enquiryStore } from '../services/enquiryStore';
 import { SparePart } from '../types/product';
 import { SpareCard } from '../components/SpareCard';
@@ -465,7 +465,7 @@ export const SpareDetail: React.FC<SpareDetailProps> = ({ onOpenQuoteModal }) =>
                   spare={rel}
                   onOpenQuoteModal={onOpenQuoteModal}
                   onSelectForEnquiry={() => {
-                    navigate(`/spares/${rel.slug || rel.partNumber || rel.id}`);
+                    navigate(`/spares/${rel.slug || getSpareSlug(rel) || rel.id}`);
                   }}
                 />
               ))}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { SparePart } from '../types/product';
 import { slugify } from '../services/productStore';
+import { getSpareSlug } from '../services/sparesStore';
 
 interface SpareCardProps {
   spare: SparePart;
@@ -14,7 +15,7 @@ export const SpareCard: React.FC<SpareCardProps> = ({
   spare,
   onSelectForEnquiry
 }) => {
-  const spareSlug = spare.slug || slugify(`${spare.name} ${spare.partNumber}`) || spare.partNumber || spare.id;
+  const spareSlug = spare.slug || getSpareSlug(spare) || spare.partNumber || spare.id;
   const imageSrc = spare.image || '/assets/images/countertop_induction_hob.png';
 
   return (

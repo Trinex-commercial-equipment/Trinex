@@ -1,36 +1,64 @@
 import { SparePart, ProductSpec } from '../types/product';
 import { getSupabase, logSupabaseError } from './supabaseClient';
 import { SPARE_PARTS } from '../data/sparesData';
+import { slugify } from './productStore';
 
-export const INITIAL_SPARES: SparePart[] = SPARE_PARTS.map((item, idx) => ({
-  id: item.id || `sp-0${idx + 1}`,
-  name: item.partName,
-  partNumber: item.partCode,
-  compatibleEquipment: Array.isArray(item.compatibility) ? item.compatibility.join(', ') : '',
-  category: item.category,
-  image: '/assets/images/cooking_range.jpg',
-  shortDescription: item.description,
-  specifications: Object.entries(item.specs || {}).map(([label, value]) => ({ label, value })),
-  availability: item.inStock ? 'in_stock' : 'procurement',
-  status: 'active',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-}));
+export const getSpareSlug = (spare: { name: string; partNumber?: string; slug?: string; id?: string }): string => {
+  if (spare.slug) return spare.slug;
+  if (spare.name && spare.partNumber) {
+    const combined = slugify(`${spare.name} ${spare.partNumber}`);
+    if (combined) return combined;
+  }
+  if (spare.name) {
+    const byName = slugify(spare.name);
+    if (byName) return byName;
+  }
+  return spare.id || '';
+};
 
-const mapRowToSpare = (row: any): SparePart => ({
-  id: row.id,
-  name: row.name,
-  partNumber: row.part_number || '',
-  compatibleEquipment: row.compatible_equipment || '',
-  category: row.category || '',
-  image: row.image || '',
-  shortDescription: row.short_description || '',
-  specifications: Array.isArray(row.specifications) ? row.specifications : [],
-  availability: row.availability || 'in_stock',
-  status: row.status || 'active',
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
+export const INITIAL_SPARES: SparePart[] = SPARE_PARTS.map((item, idx) => {
+  const name = item.partName || '';
+  const partNumber = item.partCode || '';
+  const autoSlug = slugify(`${name} ${partNumber}`) || slugify(name) || `sp-0${idx + 1}`;
+
+  return {
+    id: item.id || `sp-0${idx + 1}`,
+    slug: autoSlug,
+    name,
+    partNumber,
+    compatibleEquipment: Array.isArray(item.compatibility) ? item.compatibility.join(', ') : '',
+    category: item.category,
+    image: '/assets/images/cooking_range.jpg',
+    shortDescription: item.description,
+    specifications: Object.entries(item.specs || {}).map(([label, value]) => ({ label, value })),
+    availability: item.inStock ? 'in_stock' : 'procurement',
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 });
+
+const mapRowToSpare = (row: any): SparePart => {
+  const name = row.name || '';
+  const partNumber = row.part_number || '';
+  const autoSlug = slugify(`${name} ${partNumber}`) || slugify(name) || row.id;
+
+  return {
+    id: row.id,
+    slug: row.slug || autoSlug,
+    name,
+    partNumber,
+    compatibleEquipment: row.compatible_equipment || '',
+    category: row.category || '',
+    image: row.image || '',
+    shortDescription: row.short_description || '',
+    specifications: Array.isArray(row.specifications) ? row.specifications : [],
+    availability: row.availability || 'in_stock',
+    status: row.status || 'active',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+};
 
 const mapSpareToRow = (spare: Partial<SparePart>) => ({
   ...(spare.id !== undefined && { id: spare.id }),
@@ -168,14 +196,51 @@ class SparesStoreService {
     return this.spares.find((spare) => spare.id === id);
   }
 
-  public getSpareBySlug(slug: string): SparePart | undefined {
+  public getSpareBySlug(searchSlug: string): SparePart | undefined {
+    if (!searchSlug) return undefined;
+    const cleanSearch = searchSlug.toLowerCase().trim();
+
     return this.spares.find((spare) => {
-      const spareSlug = spare.name
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-      return spareSlug === slug;
+      // 1. Direct match on spare.slug
+      if (spare.slug && spare.slug.toLowerCase() === cleanSearch) {
+        return true;
+      }
+
+      // 2. Match on unified getSpareSlug(spare)
+      const canonicalSlug = getSpareSlug(spare).toLowerCase();
+      if (canonicalSlug && canonicalSlug === cleanSearch) {
+        return true;
+      }
+
+      // 3. Match on slugify(name + " " + partNumber)
+      const namePartSlug = slugify(`${spare.name || ''} ${spare.partNumber || ''}`).toLowerCase();
+      if (namePartSlug && namePartSlug === cleanSearch) {
+        return true;
+      }
+
+      // 4. Match on slugify(name)
+      const nameSlug = slugify(spare.name || '').toLowerCase();
+      if (nameSlug && nameSlug === cleanSearch) {
+        return true;
+      }
+
+      // 5. Match on exact ID
+      if (spare.id && spare.id.toLowerCase() === cleanSearch) {
+        return true;
+      }
+
+      // 6. Match on partNumber (exact or slugified)
+      if (spare.partNumber) {
+        if (spare.partNumber.toLowerCase() === cleanSearch) return true;
+        if (slugify(spare.partNumber).toLowerCase() === cleanSearch) return true;
+      }
+
+      // 7. Fallback: if searchSlug contains nameSlug or vice versa
+      if (nameSlug && (cleanSearch.startsWith(nameSlug) || nameSlug.startsWith(cleanSearch))) {
+        return true;
+      }
+
+      return false;
     });
   }
 
@@ -187,9 +252,11 @@ class SparesStoreService {
     spareData: Omit<SparePart, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<SparePart> {
     const now = new Date().toISOString();
+    const autoSlug = spareData.slug || slugify(`${spareData.name} ${spareData.partNumber || ''}`) || slugify(spareData.name);
     const newSpare: SparePart = {
       ...spareData,
       id: `spare-${Date.now()}`,
+      slug: autoSlug,
       createdAt: now,
       updatedAt: now,
     };
@@ -249,10 +316,15 @@ class SparesStoreService {
       }
     }
 
-    this.spares[idx] = {
+    const updated: SparePart = {
       ...this.spares[idx],
       ...updates,
+      updatedAt: new Date().toISOString(),
     };
+    if (updates.name || updates.partNumber) {
+      updated.slug = updates.slug || slugify(`${updated.name} ${updated.partNumber || ''}`) || slugify(updated.name);
+    }
+    this.spares[idx] = updated;
     this.notify();
     return this.spares[idx];
   }
