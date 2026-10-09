@@ -44,7 +44,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
     updateSpares();
     const unsub = sparesStore.subscribe(updateSpares);
     return () => unsub();
-  }, []);
+  }, []) ;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
