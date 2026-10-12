@@ -140,10 +140,13 @@ class SparesStoreService {
         return this.spares;
       }
 
-      if (data) {
+      if (data && data.length > 0) {
         this.spares = data.map(mapRowToSpare);
         console.log(`✅ [Supabase:SparesStore] Loaded ${this.spares.length} spares from Supabase.`);
         this.notify();
+      } else {
+        console.log('[Supabase:SparesStore] "spares" table is empty. Seeding initial spares...');
+        await this.seedSparesToSupabase();
       }
 
       return this.spares;

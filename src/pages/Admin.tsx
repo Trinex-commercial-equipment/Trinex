@@ -96,6 +96,59 @@ const IDEAL_FOR_OPTIONS = [
   'Institutional Kitchens'
 ];
 
+/**
+ * Automatically resizes & compresses user-uploaded images to lightweight WebP/JPEG Base64 strings.
+ * Reduces 5MB-15MB camera files down to ~70KB-140KB, preventing Supabase statement timeout.
+ */
+export const compressImageFile = (file: File, maxDimension = 1200, quality = 0.82): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
+      };
+      img.onerror = () => resolve(e.target?.result as string);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
 export const Admin: React.FC = () => {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -103,6 +156,10 @@ export const Admin: React.FC = () => {
   });
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
+
+  // Submit and Upload Loading States
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [compressingImages, setCompressingImages] = useState(false);
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<
@@ -448,6 +505,9 @@ export const Admin: React.FC = () => {
       return;
     }
 
+    if (savingProduct) return;
+    setSavingProduct(true);
+
     try {
       if (editingProductId) {
         await productStore.updateProduct(editingProductId, {
@@ -466,6 +526,8 @@ export const Admin: React.FC = () => {
     } catch (err: any) {
       const diag = diagnoseSupabaseError(err);
       alert(`❌ Failed to save product to Supabase:\n\n${diag.message}\n\n👉 Solution: ${diag.actionableHint}`);
+    } finally {
+      setSavingProduct(false);
     }
   };
 
@@ -512,23 +574,28 @@ export const Admin: React.FC = () => {
     }
   };
 
-  // Image Upload handler (Base64 file reader)
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Image Upload handler with instant client-side auto-compression
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setProductForm((prev) => ({
-            ...prev,
-            images: [...prev.images, reader.result as string],
-          }));
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    setCompressingImages(true);
+    try {
+      const compressedImages = await Promise.all(
+        Array.from(files).map((file) => compressImageFile(file, 1200, 0.82))
+      );
+      setProductForm((prev) => ({
+        ...prev,
+        images: [...prev.images, ...compressedImages],
+      }));
+      showNotification(`Uploaded & optimized ${compressedImages.length} image(s) for high-speed saving.`);
+    } catch (err) {
+      console.error('Failed to compress images:', err);
+      alert('Failed to process one or more images. Please try again.');
+    } finally {
+      setCompressingImages(false);
+      e.target.value = '';
+    }
   };
 
   // ----------------------------------------------------
@@ -558,20 +625,21 @@ export const Admin: React.FC = () => {
     setCategoryModalOpen(true);
   };
 
-  const handleCategoryImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setCategoryForm((prev) => ({
-          ...prev,
-          image: reader.result as string,
-        }));
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageFile(file, 800, 0.82);
+      setCategoryForm((prev) => ({
+        ...prev,
+        image: compressed,
+      }));
+    } catch (err) {
+      console.error('Category image compress error:', err);
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const handleSaveCategory = async (e: React.FormEvent) => {
@@ -686,7 +754,7 @@ export const Admin: React.FC = () => {
     setSpareModalOpen(true);
   };
 
-  const handleSpareImageUpload = (
+  const handleSpareImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
@@ -698,22 +766,18 @@ export const Admin: React.FC = () => {
       return;
     }
 
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setSpareForm((prev) => ({
-          ...prev,
-          image: reader.result as string,
-        }));
-      }
-    };
-
-    reader.onerror = () => {
-      alert('Failed to read the selected image.');
-    };
-
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageFile(file, 800, 0.82);
+      setSpareForm((prev) => ({
+        ...prev,
+        image: compressed,
+      }));
+    } catch (err) {
+      console.error('Failed to process spare image:', err);
+      alert('Failed to process the selected image.');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const handleSaveSpare = async (
@@ -2289,17 +2353,26 @@ export const Admin: React.FC = () => {
                   <h4 className="text-xs font-black uppercase tracking-wider text-gray-400">
                     3. Product Images (Multiple Images Supported)
                   </h4>
-                  <label className="cursor-pointer text-xs font-bold text-trinex-red hover:underline flex items-center gap-1">
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload Local File</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleImageFileUpload}
-                      className="hidden"
-                    />
-                  </label>
+                  <div className="flex items-center gap-3">
+                    {compressingImages && (
+                      <span className="text-xs font-bold text-amber-600 flex items-center gap-1.5 animate-pulse">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Optimizing image(s)...</span>
+                      </span>
+                    )}
+                    <label className={`cursor-pointer text-xs font-bold text-trinex-red hover:underline flex items-center gap-1 ${compressingImages ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Local File</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageFileUpload}
+                        className="hidden"
+                        disabled={compressingImages}
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -2631,9 +2704,11 @@ export const Admin: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-lg bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider shadow-sm"
+                  disabled={savingProduct || compressingImages}
+                  className="px-6 py-2.5 rounded-lg bg-trinex-red hover:bg-trinex-red-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs uppercase tracking-wider shadow-sm flex items-center gap-2"
                 >
-                  Save & Publish Product
+                  {savingProduct && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{savingProduct ? 'Saving to Supabase...' : 'Save & Publish Product'}</span>
                 </button>
               </div>
 

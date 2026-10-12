@@ -553,10 +553,13 @@ class ProductStoreService {
         return this.categories;
       }
 
-      if (data) {
+      if (data && data.length > 0) {
         this.categories = data.map(mapRowToCategory);
         console.log(`✅ [Supabase:ProductStore] Loaded ${data.length} categories from Supabase.`);
         this.notify();
+      } else if (data && data.length === 0) {
+        console.log('[Supabase:ProductStore] "categories" table is empty. Seeding initial categories...');
+        await this.seedCategoriesToSupabase();
       }
     } catch (err) {
       logSupabaseError('fetchCategories() exception', err);
@@ -607,10 +610,13 @@ class ProductStoreService {
         return this.products;
       }
 
-      if (data) {
+      if (data && data.length > 0) {
         this.products = data.map(mapRowToProduct);
         console.log(`✅ [Supabase:ProductStore] Loaded ${data.length} products from Supabase.`);
         this.notify();
+      } else if (data && data.length === 0) {
+        console.log('[Supabase:ProductStore] "products" table is empty. Seeding initial demo product...');
+        await this.seedProductsToSupabase();
       }
     } catch (err) {
       logSupabaseError('fetchProducts() exception', err);
@@ -806,9 +812,10 @@ class ProductStoreService {
   }
 
   public async addProduct(productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product> {
-    const autoSlug = productData.slug ? slugify(productData.slug) : slugify(`${productData.name} ${productData.model}`);
+    const rawSlug = productData.slug ? slugify(productData.slug) : slugify(`${productData.name} ${productData.model || ''}`);
+    const autoSlug = rawSlug || slugify(productData.name) || `prod-${Date.now()}`;
     
-    // Ensure slug uniqueness
+    // Ensure slug uniqueness against local store
     let finalSlug = autoSlug;
     let counter = 1;
     while (this.products.some((p) => p.slug === finalSlug)) {
@@ -826,25 +833,40 @@ class ProductStoreService {
 
     const supabase = getSupabase();
     if (supabase) {
-      const row = mapProductToRow(newProduct);
-      console.log(`📤 [Supabase:ProductStore] Sending INSERT for product "${newProduct.name}"...`, row);
+      let insertSuccess = false;
+      let lastError: any = null;
+      let attempts = 0;
 
-      const { data, error } = await supabase.from('products').insert([row]).select().single();
-      if (error) {
-        const diagnosed = logSupabaseError(`addProduct("${newProduct.name}")`, error, row);
-        throw new Error(`${diagnosed.message} — ${diagnosed.actionableHint}`);
+      while (!insertSuccess && attempts < 5) {
+        attempts++;
+        const row = mapProductToRow(newProduct);
+        console.log(`📤 [Supabase:ProductStore] Sending INSERT for product "${newProduct.name}" (Slug: ${newProduct.slug})...`, row);
+
+        const { data, error } = await supabase.from('products').insert([row]).select().single();
+        if (!error && data) {
+          insertSuccess = true;
+          const saved = mapRowToProduct(data);
+          console.log(`✅ [Supabase:ProductStore] Successfully inserted product "${saved.name}" (ID: ${saved.id}) in Supabase.`);
+          this.products.unshift(saved);
+          this.notify();
+          return saved;
+        }
+
+        lastError = error;
+        const errCode = String(error?.code || '');
+        const errMsg = String(error?.message || '');
+        if (errCode === '23505' || errMsg.includes('products_slug_key') || errMsg.includes('unique constraint')) {
+          console.warn(`[Supabase:ProductStore] Slug "${newProduct.slug}" already exists in Supabase. Auto-resolving with unique suffix...`);
+          newProduct.slug = `${autoSlug}-${Date.now().toString().slice(-4)}${attempts > 1 ? `-${attempts}` : ''}`;
+        } else {
+          break;
+        }
       }
 
-      const saved = mapRowToProduct(data);
-      console.log(`✅ [Supabase:ProductStore] Successfully inserted product "${saved.name}" (ID: ${saved.id}) in Supabase.`);
-      this.products.unshift(saved);
-      this.notify();
-      return saved;
+      const diagnosed = logSupabaseError(`addProduct("${newProduct.name}")`, lastError);
+      throw new Error(`${diagnosed.message} — ${diagnosed.actionableHint}`);
     } else {
-      console.log(supabase)
-      console.warn('⚠️ [Supabase:ProductStore] Supabase is not configured. Saving in-memory only.');
       this.products.unshift(newProduct);
-
       this.notify();
       return newProduct;
     }
@@ -858,32 +880,58 @@ class ProductStoreService {
       updates.slug = slugify(`${updates.name} ${updates.model || ''}`);
     }
 
+    if (updates.slug) {
+      let candidateSlug = updates.slug;
+      let counter = 1;
+      while (this.products.some((p) => p.id !== id && p.slug === candidateSlug)) {
+        candidateSlug = `${updates.slug}-${counter++}`;
+      }
+      updates.slug = candidateSlug;
+    }
+
     updates.updatedAt = new Date().toISOString();
 
     const supabase = getSupabase();
     if (supabase) {
-      const row = mapProductToRow(updates);
-      console.log(`📤 [Supabase:ProductStore] Sending UPDATE for product (ID: ${id})...`, row);
+      let updateSuccess = false;
+      let lastError: any = null;
+      let attempts = 0;
 
-      const { data, error } = await supabase
-        .from('products')
-        .update(row)
-        .eq('id', id)
-        .select()
-        .single();
+      while (!updateSuccess && attempts < 3) {
+        attempts++;
+        const row = mapProductToRow(updates);
+        console.log(`📤 [Supabase:ProductStore] Sending UPDATE for product (ID: ${id}, Slug: ${updates.slug || 'unchanged'})...`, row);
 
-      if (error) {
-        const diagnosed = logSupabaseError(`updateProduct(ID: "${id}")`, error, row);
-        throw new Error(`${diagnosed.message} — ${diagnosed.actionableHint}`);
+        const { data, error } = await supabase
+          .from('products')
+          .update(row)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (!error && data) {
+          updateSuccess = true;
+          const updated = mapRowToProduct(data);
+          console.log(`✅ [Supabase:ProductStore] Successfully updated product "${updated.name}" (ID: ${id}) in Supabase.`);
+          this.products[idx] = updated;
+          this.notify();
+          return updated;
+        }
+
+        lastError = error;
+        const errCode = String(error?.code || '');
+        const errMsg = String(error?.message || '');
+        if (updates.slug && (errCode === '23505' || errMsg.includes('products_slug_key') || errMsg.includes('unique constraint'))) {
+          console.warn(`[Supabase:ProductStore] Slug collision on update. Auto-resolving...`);
+          updates.slug = `${updates.slug}-${Date.now().toString().slice(-4)}`;
+        } else {
+          break;
+        }
       }
 
-      const updated = mapRowToProduct(data);
-      console.log(`✅ [Supabase:ProductStore] Successfully updated product "${updated.name}" (ID: ${id}) in Supabase.`);
-      this.products[idx] = updated;
-      this.notify();
-      return updated;
+      const diagnosed = logSupabaseError(`updateProduct(ID: "${id}")`, lastError);
+      throw new Error(`${diagnosed.message} — ${diagnosed.actionableHint}`);
     } else {
-      console.warn('⚠️ [Supabase:ProductStore] Supabase is not configured. Updating in-memory only.');
       this.products[idx] = {
         ...this.products[idx],
         ...updates,
