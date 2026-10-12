@@ -553,13 +553,10 @@ class ProductStoreService {
         return this.categories;
       }
 
-      if (data && data.length > 0) {
+      if (data) {
         this.categories = data.map(mapRowToCategory);
         console.log(`✅ [Supabase:ProductStore] Loaded ${data.length} categories from Supabase.`);
         this.notify();
-      } else if (data && data.length === 0) {
-        console.log('[Supabase:ProductStore] "categories" table is empty. Seeding initial categories...');
-        await this.seedCategoriesToSupabase();
       }
     } catch (err) {
       logSupabaseError('fetchCategories() exception', err);
@@ -610,13 +607,10 @@ class ProductStoreService {
         return this.products;
       }
 
-      if (data && data.length > 0) {
+      if (data) {
         this.products = data.map(mapRowToProduct);
         console.log(`✅ [Supabase:ProductStore] Loaded ${data.length} products from Supabase.`);
         this.notify();
-      } else if (data && data.length === 0) {
-        console.log('[Supabase:ProductStore] "products" table is empty. Seeding initial demo product...');
-        await this.seedProductsToSupabase();
       }
     } catch (err) {
       logSupabaseError('fetchProducts() exception', err);

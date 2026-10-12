@@ -107,17 +107,11 @@ class SliderStoreService {
         return;
       }
 
-      if (data && data.length > 0) {
+      if (data) {
         this.slides = data.map(mapRowToHeroSlide);
         this.isLoadedFromRemote = true;
         this.saveToStorage();
-      } else {
-        // Seed slides into Supabase. If user already added slides locally, upload those so they are preserved in the cloud!
-        console.log('Seeding hero slides into Supabase cloud...');
-        const slidesToUpload = (this.slides && this.slides.length > 0) ? this.slides : INITIAL_SLIDES;
-        const rows = slidesToUpload.map(mapHeroSlideToRow);
-        await supabase.from('hero_slides').insert(rows);
-        this.isLoadedFromRemote = true;
+        this.notify();
       }
     } catch (err) {
       console.warn('Could not sync hero slides with Supabase:', err);
