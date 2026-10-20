@@ -91,7 +91,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
     <div className="bg-white min-h-screen py-10 space-y-16">
       
       {/* Hero Section */}
-      <section className="bg-trinex-light-gray border-b border-trinex-border py-12 sm:py-16">
+      <section className=" bg-trinex-light-gray border-b border-trinex-border py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-white border border-trinex-border shadow-xs text-trinex-red text-xs font-black uppercase tracking-wider">
             <PackageCheck className="w-3.5 h-3.5" />
