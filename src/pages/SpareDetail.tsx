@@ -341,7 +341,7 @@ export const SpareDetail: React.FC<SpareDetailProps> = ({ onOpenQuoteModal }) =>
         </section>
 
         {/* Embedded Fast Spare Request Form */}
-        <section className="bg-white border border-trinex-border rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
+        <section className="bg-white border-2 border-slate-300 rounded-2xl p-6 sm:p-8 shadow-md space-y-6">
           <div className="border-b border-gray-100 pb-4">
             <span className="text-xs font-black uppercase tracking-wider text-trinex-red block">
               Direct Parts Order
@@ -374,7 +374,7 @@ export const SpareDetail: React.FC<SpareDetailProps> = ({ onOpenQuoteModal }) =>
                   placeholder="e.g. Ramesh Reddy"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                 />
               </div>
 
@@ -386,7 +386,7 @@ export const SpareDetail: React.FC<SpareDetailProps> = ({ onOpenQuoteModal }) =>
                   placeholder="10-digit mobile number"
                   value={formData.mobile}
                   onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                 />
               </div>
 
@@ -397,7 +397,7 @@ export const SpareDetail: React.FC<SpareDetailProps> = ({ onOpenQuoteModal }) =>
                   placeholder="e.g. Hyderabad Cloud Kitchens"
                   value={formData.businessName}
                   onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                 />
               </div>
 
@@ -408,7 +408,7 @@ export const SpareDetail: React.FC<SpareDetailProps> = ({ onOpenQuoteModal }) =>
                   placeholder="Hyderabad, Bengaluru, Vijayawada..."
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                 />
               </div>
 
@@ -419,7 +419,7 @@ export const SpareDetail: React.FC<SpareDetailProps> = ({ onOpenQuoteModal }) =>
                   placeholder="Specify quantity required, urgent delivery requirement, or machine serial numbers..."
                   value={formData.additionalDetails}
                   onChange={(e) => setFormData({ ...formData, additionalDetails: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red resize-none"
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none resize-none font-medium"
                 />
               </div>
 

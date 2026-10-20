@@ -163,7 +163,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuoteModal }) => {
 
           {/* Right Column: Service Request Form */}
           <div className="lg:col-span-5">
-            <div className="border border-trinex-border rounded-2xl p-6 sm:p-8 bg-white shadow-card space-y-6 sticky top-24">
+            <div className="border-2 border-slate-300 rounded-2xl p-6 sm:p-8 bg-white shadow-md space-y-6 sticky top-24">
               
               <div>
                 <span className="text-xs font-black uppercase tracking-widest text-trinex-red block mb-1">
@@ -220,7 +220,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuoteModal }) => {
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="Contact person name"
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                     />
                   </div>
 
@@ -237,7 +237,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuoteModal }) => {
                       value={formData.mobile}
                       onChange={handleChange}
                       placeholder="10-digit mobile"
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                     />
                   </div>
 
@@ -252,7 +252,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuoteModal }) => {
                         value={formData.businessName}
                         onChange={handleChange}
                         placeholder="Restaurant / Hotel"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                        className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                       />
                     </div>
 
@@ -267,7 +267,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuoteModal }) => {
                         value={formData.city}
                         onChange={handleChange}
                         placeholder="e.g. Hyderabad"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                        className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                       />
                     </div>
                   </div>
@@ -280,7 +280,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuoteModal }) => {
                       name="serviceRequired"
                       value={formData.serviceRequired}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red bg-white"
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-white hover:border-slate-400 transition-colors focus:outline-none font-medium"
                     >
                       <option value="Repair">Repair / Breakdown</option>
                       <option value="Installation">Installation & Commissioning</option>
@@ -300,7 +300,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuoteModal }) => {
                       value={formData.equipmentBrandModel}
                       onChange={handleChange}
                       placeholder="e.g. Trinex 3.5kW Cooktop, Rational Oven, etc."
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                     />
                   </div>
 
@@ -314,7 +314,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuoteModal }) => {
                       value={formData.describeIssue}
                       onChange={handleChange}
                       placeholder="Explain error codes, abnormal sounds, heating failure, etc."
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red resize-none"
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none resize-none font-medium"
                     />
                   </div>
 

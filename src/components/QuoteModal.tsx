@@ -74,7 +74,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div 
-        className="relative bg-white w-full max-w-lg rounded-lg shadow-2xl border border-trinex-border overflow-hidden animate-in zoom-in-95 duration-150"
+        className="relative bg-white w-full max-w-lg rounded-2xl shadow-2xl border-2 border-slate-300 overflow-hidden animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -145,7 +145,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Enter your name"
-                    className="w-full px-3 py-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
 
@@ -162,7 +162,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
                     value={formData.phone}
                     onChange={handleChange}
                     placeholder="10-digit phone"
-                    className="w-full px-3 py-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
               </div>
@@ -178,7 +178,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
                     value={formData.company}
                     onChange={handleChange}
                     placeholder="Restaurant, Hotel, Cloud Kitchen"
-                    className="w-full px-3 py-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
 
@@ -192,7 +192,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
                     value={formData.city}
                     onChange={handleChange}
                     placeholder="Hyderabad, Secunderabad, etc."
-                    className="w-full px-3 py-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
               </div>
@@ -207,7 +207,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
                   value={formData.requirements}
                   onChange={handleChange}
                   placeholder="Tell us what equipment capacity or specifications you need..."
-                  className="w-full px-3 py-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red resize-none"
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none resize-none font-medium"
                 />
               </div>
 

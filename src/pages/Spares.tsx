@@ -260,7 +260,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 sm:p-8 rounded-xl border border-gray-200 text-left">
+            <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 sm:p-8 rounded-2xl border-2 border-slate-300 shadow-md text-left">
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -274,7 +274,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Enter your name"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
 
@@ -291,7 +291,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
                     value={formData.mobile}
                     onChange={handleChange}
                     placeholder="10-digit mobile number"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
               </div>
@@ -307,7 +307,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
                     value={formData.businessName}
                     onChange={handleChange}
                     placeholder="Restaurant / Hotel Name"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
 
@@ -322,7 +322,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
                     value={formData.city}
                     onChange={handleChange}
                     placeholder="e.g. Hyderabad, Vijayawada"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
               </div>
@@ -339,7 +339,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
                     value={formData.equipmentBrand}
                     onChange={handleChange}
                     placeholder="e.g. Trinex, Rational, Unox, Electrolux"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
 
@@ -353,7 +353,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
                     value={formData.equipmentModel}
                     onChange={handleChange}
                     placeholder="e.g. 3.5 kW Flat Model, 10-tray combi"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
               </div>
@@ -370,7 +370,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
                     value={formData.sparePartRequired}
                     onChange={handleChange}
                     placeholder="e.g. Ceramic glass plate, coil, thermostat"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
 
@@ -384,7 +384,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
                     value={formData.partNumber}
                     onChange={handleChange}
                     placeholder="e.g. TRX-IND-GLS-35"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red"
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                   />
                 </div>
               </div>
@@ -399,7 +399,7 @@ export const Spares: React.FC<SparesProps> = ({ onOpenQuoteModal }) => {
                   value={formData.additionalDetails}
                   onChange={handleChange}
                   placeholder="Include any dimensions, voltage specifications, or symptoms..."
-                  className="w-full px-3 py-2 text-xs sm:text-sm rounded border border-gray-300 focus:outline-none focus:border-trinex-red resize-none"
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none resize-none font-medium"
                 />
               </div>
 

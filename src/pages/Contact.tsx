@@ -160,7 +160,7 @@ export const Contact: React.FC = () => {
 
           {/* Right Column: Contact Inquiry Form */}
           <div className="lg:col-span-7">
-            <div className="border border-trinex-border rounded-2xl p-6 sm:p-10 bg-white shadow-card space-y-6">
+            <div className="border-2 border-slate-300 rounded-2xl p-6 sm:p-10 bg-white shadow-md space-y-6">
               
               <div>
                 <span className="text-xs font-black uppercase tracking-widest text-trinex-red block mb-1">
@@ -216,7 +216,7 @@ export const Contact: React.FC = () => {
                         value={formData.fullName}
                         onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                         placeholder="Your name"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                        className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                       />
                     </div>
 
@@ -232,7 +232,7 @@ export const Contact: React.FC = () => {
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="10-digit mobile"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                        className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                       />
                     </div>
                   </div>
@@ -247,7 +247,7 @@ export const Contact: React.FC = () => {
                         value={formData.companyName}
                         onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                         placeholder="e.g. Royal Kitchens, Cloud Foods"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                        className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                       />
                     </div>
 
@@ -260,7 +260,7 @@ export const Contact: React.FC = () => {
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         placeholder="name@business.com"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                        className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                       />
                     </div>
                   </div>
@@ -272,7 +272,7 @@ export const Contact: React.FC = () => {
                     <select
                       value={formData.requirementType}
                       onChange={(e) => setFormData({ ...formData, requirementType: e.target.value })}
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red bg-white"
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-white hover:border-slate-400 transition-colors focus:outline-none font-medium"
                     >
                       <option value="Sales Inquiry">Commercial Equipment Sales</option>
                       <option value="Induction Inquiry">Commercial Induction Solutions</option>
@@ -291,7 +291,7 @@ export const Contact: React.FC = () => {
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       placeholder="Specify requirements, kitchen size, or models of interest..."
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red resize-none"
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none resize-none font-medium"
                     />
                   </div>
 

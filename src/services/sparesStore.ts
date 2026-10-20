@@ -192,6 +192,21 @@ class SparesStoreService {
     return this.spares.filter((spare) => spare.status === 'active');
   }
 
+  public searchSpares(query: string): SparePart[] {
+    const all = this.getAllSpares();
+    if (!query || !query.trim()) return all;
+    const q = query.toLowerCase().trim();
+    return all.filter((spare) => {
+      return (
+        (spare.name && spare.name.toLowerCase().includes(q)) ||
+        (spare.partNumber && spare.partNumber.toLowerCase().includes(q)) ||
+        (spare.category && spare.category.toLowerCase().includes(q)) ||
+        (spare.compatibleEquipment && spare.compatibleEquipment.toLowerCase().includes(q)) ||
+        (spare.shortDescription && spare.shortDescription.toLowerCase().includes(q))
+      );
+    });
+  }
+
   public getSpareById(id: string): SparePart | undefined {
     return this.spares.find((spare) => spare.id === id);
   }

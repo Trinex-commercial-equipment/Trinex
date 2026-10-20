@@ -23,7 +23,13 @@ import {
   Sparkles,
   Eye,
   Check,
-  X
+  X,
+  Key,
+  ChevronLeft,
+  ChevronRight,
+  PhoneCall,
+  Filter,
+  Calendar
 } from 'lucide-react';
 import { productStore, slugify } from '../services/productStore';
 import { sparesStore } from '../services/sparesStore';
@@ -301,6 +307,31 @@ export const Admin: React.FC = () => {
     status: 'active'
   });
 
+  // Admin Change Password Modal States
+  const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
+  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [passwordChangeError, setPasswordChangeError] = useState('');
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
+
+  // Dashboard Enquiries Hub Filter States
+  const [dashboardEnquiryType, setDashboardEnquiryType] = useState<'all' | 'quotes' | 'services' | 'spares'>('all');
+  const [dashboardStatusFilter, setDashboardStatusFilter] = useState<'all' | 'new' | 'contacted' | 'in_progress' | 'completed'>('all');
+  const [dashboardEnquirySearch, setDashboardEnquirySearch] = useState('');
+
+  // Service Requests Tab Filter & Pagination States
+  const [serviceStatusFilter, setServiceStatusFilter] = useState<'all' | 'new' | 'contacted' | 'in_progress' | 'completed'>('all');
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [servicePage, setServicePage] = useState(1);
+  const SERVICES_PER_PAGE = 8;
+
+  // Spare Requests Tab Filter & Pagination States
+  const [spareRequestStatusFilter, setSpareRequestStatusFilter] = useState<'all' | 'new' | 'contacted' | 'in_progress' | 'completed'>('all');
+  const [spareRequestSearch, setSpareRequestSearch] = useState('');
+  const [spareRequestPage, setSpareRequestPage] = useState(1);
+  const SPARES_PER_PAGE = 8;
+
   const [copiedSchema, setCopiedSchema] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -404,7 +435,8 @@ export const Admin: React.FC = () => {
   // Login handler
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'trinex@2025' || password === 'admin') {
+    const currentAdminPass = localStorage.getItem('trinex_admin_password') || 'trinex@2025';
+    if (password === currentAdminPass || password === 'trinex@2025' || password === 'admin') {
       setIsAuthenticated(true);
       sessionStorage.setItem('trinex_admin_auth', 'true');
       setAuthError('');
@@ -416,6 +448,44 @@ export const Admin: React.FC = () => {
   const handleLogout = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('trinex_admin_auth');
+  };
+
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordChangeError('');
+    setPasswordChangeSuccess('');
+
+    const savedPassword = localStorage.getItem('trinex_admin_password') || 'trinex@2025';
+    if (
+      currentPasswordInput !== savedPassword &&
+      currentPasswordInput !== 'trinex@2025' &&
+      currentPasswordInput !== 'admin'
+    ) {
+      setPasswordChangeError('Current password is not correct.');
+      return;
+    }
+
+    if (newPasswordInput.length < 5) {
+      setPasswordChangeError('New password must be at least 5 characters long.');
+      return;
+    }
+
+    if (newPasswordInput !== confirmPasswordInput) {
+      setPasswordChangeError('New password and confirm password do not match.');
+      return;
+    }
+
+    localStorage.setItem('trinex_admin_password', newPasswordInput);
+    setPasswordChangeSuccess('Admin password changed successfully!');
+    showNotification('Admin password updated successfully!');
+    setTimeout(() => {
+      setChangePasswordModalOpen(false);
+      setCurrentPasswordInput('');
+      setNewPasswordInput('');
+      setConfirmPasswordInput('');
+      setPasswordChangeError('');
+      setPasswordChangeSuccess('');
+    }, 1200);
   };
 
   // ----------------------------------------------------
@@ -1014,7 +1084,7 @@ export const Admin: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center p-4 bg-trinex-light-gray">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-card border border-trinex-border p-8 space-y-6">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border-2 border-slate-300 p-8 space-y-6">
           <div className="text-center space-y-2">
             <div className="w-12 h-12 rounded-xl bg-red-50 text-trinex-red flex items-center justify-center mx-auto">
               <Lock className="w-6 h-6" />
@@ -1038,7 +1108,7 @@ export const Admin: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password (default: trinex@2025)"
-                className="w-full px-4 py-2.5 text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-trinex-red"
+                className="w-full px-4 py-3 text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
               />
             </div>
 
@@ -1101,6 +1171,22 @@ export const Admin: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setPasswordChangeError('');
+              setPasswordChangeSuccess('');
+              setCurrentPasswordInput('');
+              setNewPasswordInput('');
+              setConfirmPasswordInput('');
+              setChangePasswordModalOpen(true);
+            }}
+            className="text-xs font-bold text-amber-300 hover:text-amber-200 px-3 py-1.5 rounded bg-gray-900 border border-gray-800 flex items-center gap-1.5 transition-colors"
+            title="Change admin portal access password"
+          >
+            <Key className="w-3.5 h-3.5 text-amber-400" />
+            <span>Change Password</span>
+          </button>
+
           <button
             onClick={() => window.open('/', '_blank')}
             className="text-xs font-bold text-gray-300 hover:text-white px-3 py-1.5 rounded bg-gray-900 border border-gray-800 flex items-center gap-1.5"
@@ -1251,41 +1337,283 @@ export const Admin: React.FC = () => {
               </div>
             </div>
 
-            {/* Recent Product Enquiries */}
-            <div className="bg-white p-6 rounded-xl border border-trinex-border shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-trinex-black uppercase tracking-wider">
-                  Recent Product Quote Inquiries
-                </h3>
-                <button
-                  onClick={() => setActiveTab('enquiries')}
-                  className="text-xs font-bold text-trinex-red hover:underline"
-                >
-                  View All &rarr;
-                </button>
+            {/* Unified Live Customer Enquiries Hub */}
+            <div className="bg-white p-6 rounded-2xl border-2 border-slate-300 shadow-sm space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-trinex-red bg-red-50 px-2 py-0.5 rounded">
+                      Live Customer Inbound
+                    </span>
+                    <span className="text-xs text-gray-400 font-semibold">
+                      Total: {enquiries.length + serviceRequests.length + spareRequests.length}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-black text-trinex-black uppercase tracking-wide mt-1">
+                    Customer Enquiries & Service Tickets Hub
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActiveTab('enquiries')}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 transition-colors"
+                  >
+                    Quotes ({enquiries.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('services')}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 transition-colors"
+                  >
+                    Services ({serviceRequests.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('spare_requests')}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 transition-colors"
+                  >
+                    Spares ({spareRequests.length})
+                  </button>
+                </div>
               </div>
 
-              {enquiries.length > 0 ? (
-                <div className="divide-y divide-gray-100 text-xs">
-                  {enquiries.slice(0, 5).map((enq) => (
-                    <div key={enq.id} className="py-3 flex items-center justify-between gap-4">
-                      <div>
-                        <strong className="text-trinex-black">{enq.name}</strong>
-                        <span className="text-gray-400 mx-2">|</span>
-                        <a href={`tel:${enq.phone}`} className="font-bold text-trinex-red hover:underline">
-                          {enq.phone}
-                        </a>
-                        <p className="text-gray-500 mt-0.5">{enq.productName || 'General Inquiry'}</p>
-                      </div>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-50 text-trinex-red">
-                        {enq.status}
-                      </span>
-                    </div>
+              {/* Filters & Search Row */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                {/* Category Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+                  {[
+                    { id: 'all', label: `All (${enquiries.length + serviceRequests.length + spareRequests.length})` },
+                    { id: 'quotes', label: `Quotes (${enquiries.length})` },
+                    { id: 'services', label: `Services (${serviceRequests.length})` },
+                    { id: 'spares', label: `Spares (${spareRequests.length})` },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setDashboardEnquiryType(tab.id as any)}
+                      className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                        dashboardEnquiryType === tab.id
+                          ? 'bg-trinex-black text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
                   ))}
                 </div>
-              ) : (
-                <p className="text-xs text-gray-500 py-4">No enquiries yet.</p>
-              )}
+
+                {/* Status Filter & Search */}
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={dashboardEnquirySearch}
+                      onChange={(e) => setDashboardEnquirySearch(e.target.value)}
+                      placeholder="Search inquiries..."
+                      className="pl-8 pr-3 py-1.5 text-xs rounded-lg border-2 border-slate-200 focus:border-trinex-red focus:outline-none w-36 sm:w-48 font-medium"
+                    />
+                  </div>
+
+                  <select
+                    value={dashboardStatusFilter}
+                    onChange={(e) => setDashboardStatusFilter(e.target.value as any)}
+                    className="px-2.5 py-1.5 text-xs rounded-lg border-2 border-slate-200 font-bold bg-white focus:border-trinex-red focus:outline-none"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="new">New</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Aggregated List Rendering */}
+              {(() => {
+                // Aggregate items into a uniform view
+                type UnifiedEnquiry = {
+                  id: string;
+                  type: 'quote' | 'service' | 'spare';
+                  name: string;
+                  phone: string;
+                  city?: string;
+                  company?: string;
+                  title: string;
+                  details: string;
+                  status: EnquiryStatus;
+                  createdAt: string;
+                  updateStatus: (newStatus: EnquiryStatus) => void;
+                };
+
+                const quoteItems: UnifiedEnquiry[] = enquiries.map((q) => ({
+                  id: q.id,
+                  type: 'quote',
+                  name: q.name,
+                  phone: q.phone,
+                  city: q.city,
+                  company: q.company,
+                  title: q.productName || 'Equipment Quotation',
+                  details: q.message || `Model: ${q.model || 'Standard'}`,
+                  status: q.status,
+                  createdAt: q.createdAt,
+                  updateStatus: (newStatus) => enquiryStore.updateEnquiryStatus(q.id, newStatus),
+                }));
+
+                const serviceItems: UnifiedEnquiry[] = serviceRequests.map((s) => ({
+                  id: s.id,
+                  type: 'service',
+                  name: s.name,
+                  phone: s.mobile,
+                  city: s.city,
+                  company: s.businessName,
+                  title: `Service: ${s.serviceRequired}`,
+                  details: s.equipmentBrandModel ? `${s.equipmentBrandModel} - ${s.describeIssue || ''}` : s.describeIssue || '',
+                  status: s.status,
+                  createdAt: s.createdAt,
+                  updateStatus: (newStatus) => enquiryStore.updateServiceRequestStatus(s.id, newStatus),
+                }));
+
+                const spareItems: UnifiedEnquiry[] = spareRequests.map((sp) => ({
+                  id: sp.id,
+                  type: 'spare',
+                  name: sp.name,
+                  phone: sp.mobile,
+                  city: sp.city,
+                  company: sp.businessName,
+                  title: `Spare: ${sp.sparePartRequired}`,
+                  details: sp.partNumber ? `Part #${sp.partNumber} (${sp.equipmentBrand || ''})` : `Brand: ${sp.equipmentBrand || ''}`,
+                  status: sp.status,
+                  createdAt: sp.createdAt,
+                  updateStatus: (newStatus) => enquiryStore.updateSpareRequestStatus(sp.id, newStatus),
+                }));
+
+                let allItems: UnifiedEnquiry[] = [];
+                if (dashboardEnquiryType === 'all') {
+                  allItems = [...quoteItems, ...serviceItems, ...spareItems];
+                } else if (dashboardEnquiryType === 'quotes') {
+                  allItems = quoteItems;
+                } else if (dashboardEnquiryType === 'services') {
+                  allItems = serviceItems;
+                } else if (dashboardEnquiryType === 'spares') {
+                  allItems = spareItems;
+                }
+
+                // Sort newest first
+                allItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                // Apply status filter
+                if (dashboardStatusFilter !== 'all') {
+                  allItems = allItems.filter((item) => item.status === dashboardStatusFilter);
+                }
+
+                // Apply search filter
+                if (dashboardEnquirySearch.trim()) {
+                  const q = dashboardEnquirySearch.toLowerCase().trim();
+                  allItems = allItems.filter((item) =>
+                    item.name.toLowerCase().includes(q) ||
+                    item.phone.toLowerCase().includes(q) ||
+                    (item.city && item.city.toLowerCase().includes(q)) ||
+                    (item.company && item.company.toLowerCase().includes(q)) ||
+                    item.title.toLowerCase().includes(q) ||
+                    item.details.toLowerCase().includes(q)
+                  );
+                }
+
+                if (allItems.length === 0) {
+                  return (
+                    <div className="py-10 text-center text-gray-500 bg-slate-50 rounded-xl border border-dashed border-gray-300">
+                      <MessageSquare className="w-8 h-8 text-gray-400 mx-auto mb-2 opacity-50" />
+                      <p className="text-xs font-bold text-gray-700">No matching customer enquiries found.</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">Try adjusting your category or status filters.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="overflow-x-auto border-2 border-slate-200 rounded-xl">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 uppercase text-slate-600 font-bold text-[10px] border-b border-slate-200">
+                        <tr>
+                          <th className="py-3 px-3">Date</th>
+                          <th className="py-3 px-3">Channel / Type</th>
+                          <th className="py-3 px-3">Customer</th>
+                          <th className="py-3 px-3">Mobile Contact</th>
+                          <th className="py-3 px-3">City</th>
+                          <th className="py-3 px-3">Request / Equipment</th>
+                          <th className="py-3 px-3">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {allItems.slice(0, 10).map((item) => (
+                          <tr key={`${item.type}-${item.id}`} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-3 px-3 text-slate-400 whitespace-nowrap">
+                              {new Date(item.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              {item.type === 'quote' && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-trinex-red border border-red-200">
+                                  Equipment Quote
+                                </span>
+                              )}
+                              {item.type === 'service' && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-800 border border-blue-200">
+                                  Service Booking
+                                </span>
+                              )}
+                              {item.type === 'spare' && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
+                                  Spare Part
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 font-bold text-trinex-black">
+                              <div>{item.name}</div>
+                              {item.company && (
+                                <div className="text-[10px] text-gray-500 font-normal">{item.company}</div>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <a
+                                href={`tel:${item.phone}`}
+                                className="font-bold text-trinex-red hover:underline flex items-center gap-1"
+                              >
+                                <PhoneCall className="w-3 h-3" />
+                                <span>{item.phone}</span>
+                              </a>
+                            </td>
+                            <td className="py-3 px-3 text-gray-600">{item.city || '—'}</td>
+                            <td className="py-3 px-3">
+                              <div className="font-bold text-gray-900">{item.title}</div>
+                              {item.details && (
+                                <div className="text-[10px] text-gray-500 max-w-xs truncate">{item.details}</div>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <select
+                                value={item.status}
+                                onChange={(evt) => item.updateStatus(evt.target.value as EnquiryStatus)}
+                                className={`text-[10px] font-bold rounded-md px-2 py-1 border-2 focus:outline-none transition-colors ${
+                                  item.status === 'new'
+                                    ? 'bg-red-50 text-trinex-red border-red-200'
+                                    : item.status === 'contacted'
+                                    ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                    : item.status === 'in_progress'
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                }`}
+                              >
+                                <option value="new">New</option>
+                                <option value="contacted">Contacted</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -1935,126 +2263,405 @@ export const Admin: React.FC = () => {
         {/* ====================================================
             6. SERVICE REQUESTS TAB
             ==================================================== */}
-        {activeTab === 'services' && (
-          <div className="bg-white rounded-xl border border-trinex-border p-6 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-trinex-black uppercase tracking-wider">
-              Technical Service Requests ({serviceRequests.length})
-            </h3>
-            {serviceRequests.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-100 uppercase text-gray-600 font-bold text-[10px]">
-                    <tr>
-                      <th className="py-2.5 px-3">Date</th>
-                      <th className="py-2.5 px-3">Contact</th>
-                      <th className="py-2.5 px-3">Mobile</th>
-                      <th className="py-2.5 px-3">City</th>
-                      <th className="py-2.5 px-3">Service Type</th>
-                      <th className="py-2.5 px-3">Brand / Model</th>
-                      <th className="py-2.5 px-3">Issue Details</th>
-                      <th className="py-2.5 px-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {serviceRequests.map((s) => (
-                      <tr key={s.id}>
-                        <td className="py-2.5 px-3 text-gray-400 whitespace-nowrap">
-                          {new Date(s.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-trinex-black">{s.name}</td>
-                        <td className="py-2.5 px-3">
-                          <a href={`tel:${s.mobile}`} className="text-trinex-red font-bold hover:underline">
-                            {s.mobile}
-                          </a>
-                        </td>
-                        <td className="py-2.5 px-3 text-gray-600">{s.city}</td>
-                        <td className="py-2.5 px-3 font-bold text-trinex-red">{s.serviceRequired}</td>
-                        <td className="py-2.5 px-3 text-gray-800">{s.equipmentBrandModel || '—'}</td>
-                        <td className="py-2.5 px-3 text-gray-600 max-w-xs truncate">{s.describeIssue || '—'}</td>
-                        <td className="py-2.5 px-3">
-                          <select
-                            value={s.status}
-                            onChange={(evt) => enquiryStore.updateServiceRequestStatus(s.id, evt.target.value as EnquiryStatus)}
-                            className="bg-gray-100 font-bold text-[10px] rounded px-2 py-1 text-gray-800"
-                          >
-                            <option value="new">New</option>
-                            <option value="contacted">Contacted</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        {activeTab === 'services' && (() => {
+          let filtered = [...serviceRequests];
+
+          // Status filter
+          if (serviceStatusFilter !== 'all') {
+            filtered = filtered.filter((s) => s.status === serviceStatusFilter);
+          }
+
+          // Search filter
+          if (serviceSearch.trim()) {
+            const q = serviceSearch.toLowerCase().trim();
+            filtered = filtered.filter((s) =>
+              s.name.toLowerCase().includes(q) ||
+              s.mobile.toLowerCase().includes(q) ||
+              (s.city && s.city.toLowerCase().includes(q)) ||
+              (s.businessName && s.businessName.toLowerCase().includes(q)) ||
+              s.serviceRequired.toLowerCase().includes(q) ||
+              (s.equipmentBrandModel && s.equipmentBrandModel.toLowerCase().includes(q)) ||
+              (s.describeIssue && s.describeIssue.toLowerCase().includes(q))
+            );
+          }
+
+          // Pagination
+          const totalPages = Math.ceil(filtered.length / SERVICES_PER_PAGE) || 1;
+          const currentPage = Math.min(servicePage, totalPages);
+          const startIndex = (currentPage - 1) * SERVICES_PER_PAGE;
+          const paginated = filtered.slice(startIndex, startIndex + SERVICES_PER_PAGE);
+
+          return (
+            <div className="bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-trinex-black uppercase tracking-wider">
+                    Technical Service Requests ({serviceRequests.length})
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Manage breakdown calls, preventive maintenance and engineer dispatch
+                  </p>
+                </div>
+
+                <div className="relative">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={serviceSearch}
+                    onChange={(e) => {
+                      setServiceSearch(e.target.value);
+                      setServicePage(1);
+                    }}
+                    placeholder="Search by name, phone, city, model..."
+                    className="pl-9 pr-3 py-2 text-xs rounded-lg border-2 border-slate-200 focus:border-trinex-red focus:outline-none w-64 font-medium"
+                  />
+                </div>
               </div>
-            ) : (
-              <p className="text-xs text-gray-500 py-6 text-center">No service requests submitted yet.</p>
-            )}
-          </div>
-        )}
+
+              {/* Status Filter Chips */}
+              <div className="flex items-center gap-2 overflow-x-auto text-xs pb-1">
+                {[
+                  { id: 'all', label: 'All Requests', count: serviceRequests.length },
+                  { id: 'new', label: 'New', count: serviceRequests.filter(s => s.status === 'new').length },
+                  { id: 'contacted', label: 'Contacted', count: serviceRequests.filter(s => s.status === 'contacted').length },
+                  { id: 'in_progress', label: 'In Progress', count: serviceRequests.filter(s => s.status === 'in_progress').length },
+                  { id: 'completed', label: 'Completed', count: serviceRequests.filter(s => s.status === 'completed').length },
+                ].map((chip) => (
+                  <button
+                    key={chip.id}
+                    onClick={() => {
+                      setServiceStatusFilter(chip.id as any);
+                      setServicePage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                      serviceStatusFilter === chip.id
+                        ? 'bg-trinex-red text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>{chip.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                      serviceStatusFilter === chip.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {chip.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {filtered.length > 0 ? (
+                <>
+                  <div className="overflow-x-auto border-2 border-slate-200 rounded-xl">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 uppercase text-slate-600 font-bold text-[10px] border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-3">Date</th>
+                          <th className="py-2.5 px-3">Contact</th>
+                          <th className="py-2.5 px-3">Mobile</th>
+                          <th className="py-2.5 px-3">City</th>
+                          <th className="py-2.5 px-3">Service Type</th>
+                          <th className="py-2.5 px-3">Brand / Model</th>
+                          <th className="py-2.5 px-3">Issue Details</th>
+                          <th className="py-2.5 px-3">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {paginated.map((s) => (
+                          <tr key={s.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-2.5 px-3 text-gray-400 whitespace-nowrap">
+                              {new Date(s.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-2.5 px-3 font-bold text-trinex-black">
+                              <div>{s.name}</div>
+                              {s.businessName && (
+                                <div className="text-[10px] text-gray-500 font-normal">{s.businessName}</div>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <a href={`tel:${s.mobile}`} className="text-trinex-red font-bold hover:underline flex items-center gap-1">
+                                <PhoneCall className="w-3 h-3" />
+                                <span>{s.mobile}</span>
+                              </a>
+                            </td>
+                            <td className="py-2.5 px-3 text-gray-600">{s.city}</td>
+                            <td className="py-2.5 px-3 font-bold text-trinex-red">{s.serviceRequired}</td>
+                            <td className="py-2.5 px-3 text-gray-800">{s.equipmentBrandModel || '—'}</td>
+                            <td className="py-2.5 px-3 text-gray-600 max-w-xs truncate">{s.describeIssue || '—'}</td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <select
+                                value={s.status}
+                                onChange={(evt) => enquiryStore.updateServiceRequestStatus(s.id, evt.target.value as EnquiryStatus)}
+                                className={`text-[10px] font-bold rounded-md px-2 py-1 border-2 focus:outline-none transition-colors ${
+                                  s.status === 'new'
+                                    ? 'bg-red-50 text-trinex-red border-red-200'
+                                    : s.status === 'contacted'
+                                    ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                    : s.status === 'in_progress'
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                }`}
+                              >
+                                <option value="new">New</option>
+                                <option value="contacted">Contacted</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Controls */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-gray-500">
+                    <div>
+                      Showing <strong className="text-gray-900">{startIndex + 1}</strong> to <strong className="text-gray-900">{Math.min(startIndex + SERVICES_PER_PAGE, filtered.length)}</strong> of <strong className="text-gray-900">{filtered.length}</strong> requests
+                    </div>
+
+                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                      <button
+                        onClick={() => setServicePage((prev) => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="px-2.5 py-1 rounded-md border-2 border-slate-200 bg-white font-bold text-gray-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Prev</span>
+                      </button>
+
+                      {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          onClick={() => setServicePage(pageNum)}
+                          className={`w-7 h-7 rounded-md font-bold text-xs transition-colors ${
+                            currentPage === pageNum
+                              ? 'bg-trinex-red text-white'
+                              : 'border-2 border-slate-200 bg-white text-gray-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+
+                      <button
+                        onClick={() => setServicePage((prev) => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="px-2.5 py-1 rounded-md border-2 border-slate-200 bg-white font-bold text-gray-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1"
+                      >
+                        <span>Next</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-gray-500 py-6 text-center">No service requests match the selected filters.</p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ====================================================
             7. SPARE REQUESTS TAB
             ==================================================== */}
-        {activeTab === 'spare_requests' && (
-          <div className="bg-white rounded-xl border border-trinex-border p-6 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-trinex-black uppercase tracking-wider">
-              Spare Parts Requests ({spareRequests.length})
-            </h3>
-            {spareRequests.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-100 uppercase text-gray-600 font-bold text-[10px]">
-                    <tr>
-                      <th className="py-2.5 px-3">Date</th>
-                      <th className="py-2.5 px-3">Contact</th>
-                      <th className="py-2.5 px-3">Mobile</th>
-                      <th className="py-2.5 px-3">Brand</th>
-                      <th className="py-2.5 px-3">Spare Required</th>
-                      <th className="py-2.5 px-3">Part No</th>
-                      <th className="py-2.5 px-3">Details</th>
-                      <th className="py-2.5 px-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {spareRequests.map((sp) => (
-                      <tr key={sp.id}>
-                        <td className="py-2.5 px-3 text-gray-400 whitespace-nowrap">
-                          {new Date(sp.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-trinex-black">{sp.name}</td>
-                        <td className="py-2.5 px-3">
-                          <a href={`tel:${sp.mobile}`} className="text-trinex-red font-bold hover:underline">
-                            {sp.mobile}
-                          </a>
-                        </td>
-                        <td className="py-2.5 px-3 text-gray-800">{sp.equipmentBrand}</td>
-                        <td className="py-2.5 px-3 font-bold text-trinex-black">{sp.sparePartRequired}</td>
-                        <td className="py-2.5 px-3 font-mono text-gray-600">{sp.partNumber || '—'}</td>
-                        <td className="py-2.5 px-3 text-gray-500 max-w-xs truncate">{sp.additionalDetails || '—'}</td>
-                        <td className="py-2.5 px-3">
-                          <select
-                            value={sp.status}
-                            onChange={(evt) => enquiryStore.updateSpareRequestStatus(sp.id, evt.target.value as EnquiryStatus)}
-                            className="bg-gray-100 font-bold text-[10px] rounded px-2 py-1 text-gray-800"
-                          >
-                            <option value="new">New</option>
-                            <option value="contacted">Contacted</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        {activeTab === 'spare_requests' && (() => {
+          let filtered = [...spareRequests];
+
+          // Status filter
+          if (spareRequestStatusFilter !== 'all') {
+            filtered = filtered.filter((sp) => sp.status === spareRequestStatusFilter);
+          }
+
+          // Search filter
+          if (spareRequestSearch.trim()) {
+            const q = spareRequestSearch.toLowerCase().trim();
+            filtered = filtered.filter((sp) =>
+              sp.name.toLowerCase().includes(q) ||
+              sp.mobile.toLowerCase().includes(q) ||
+              (sp.city && sp.city.toLowerCase().includes(q)) ||
+              (sp.businessName && sp.businessName.toLowerCase().includes(q)) ||
+              sp.equipmentBrand.toLowerCase().includes(q) ||
+              sp.sparePartRequired.toLowerCase().includes(q) ||
+              (sp.partNumber && sp.partNumber.toLowerCase().includes(q)) ||
+              (sp.additionalDetails && sp.additionalDetails.toLowerCase().includes(q))
+            );
+          }
+
+          // Pagination
+          const totalPages = Math.ceil(filtered.length / SPARES_PER_PAGE) || 1;
+          const currentPage = Math.min(spareRequestPage, totalPages);
+          const startIndex = (currentPage - 1) * SPARES_PER_PAGE;
+          const paginated = filtered.slice(startIndex, startIndex + SPARES_PER_PAGE);
+
+          return (
+            <div className="bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-trinex-black uppercase tracking-wider">
+                    Spare Parts Requests ({spareRequests.length})
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Track customer component replacement orders, part codes, and dispatch fulfillment
+                  </p>
+                </div>
+
+                <div className="relative">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={spareRequestSearch}
+                    onChange={(e) => {
+                      setSpareRequestSearch(e.target.value);
+                      setSpareRequestPage(1);
+                    }}
+                    placeholder="Search spare name, part code, customer..."
+                    className="pl-9 pr-3 py-2 text-xs rounded-lg border-2 border-slate-200 focus:border-trinex-red focus:outline-none w-64 font-medium"
+                  />
+                </div>
               </div>
-            ) : (
-              <p className="text-xs text-gray-500 py-6 text-center">No spare parts requests yet.</p>
-            )}
-          </div>
-        )}
+
+              {/* Status Filter Chips */}
+              <div className="flex items-center gap-2 overflow-x-auto text-xs pb-1">
+                {[
+                  { id: 'all', label: 'All Requests', count: spareRequests.length },
+                  { id: 'new', label: 'New', count: spareRequests.filter(s => s.status === 'new').length },
+                  { id: 'contacted', label: 'Contacted', count: spareRequests.filter(s => s.status === 'contacted').length },
+                  { id: 'in_progress', label: 'In Progress', count: spareRequests.filter(s => s.status === 'in_progress').length },
+                  { id: 'completed', label: 'Completed', count: spareRequests.filter(s => s.status === 'completed').length },
+                ].map((chip) => (
+                  <button
+                    key={chip.id}
+                    onClick={() => {
+                      setSpareRequestStatusFilter(chip.id as any);
+                      setSpareRequestPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                      spareRequestStatusFilter === chip.id
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>{chip.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                      spareRequestStatusFilter === chip.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {chip.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {filtered.length > 0 ? (
+                <>
+                  <div className="overflow-x-auto border-2 border-slate-200 rounded-xl">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 uppercase text-slate-600 font-bold text-[10px] border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-3">Date</th>
+                          <th className="py-2.5 px-3">Contact</th>
+                          <th className="py-2.5 px-3">Mobile</th>
+                          <th className="py-2.5 px-3">Brand</th>
+                          <th className="py-2.5 px-3">Spare Required</th>
+                          <th className="py-2.5 px-3">Part No</th>
+                          <th className="py-2.5 px-3">Details</th>
+                          <th className="py-2.5 px-3">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {paginated.map((sp) => (
+                          <tr key={sp.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-2.5 px-3 text-gray-400 whitespace-nowrap">
+                              {new Date(sp.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-2.5 px-3 font-bold text-trinex-black">
+                              <div>{sp.name}</div>
+                              {sp.businessName && (
+                                <div className="text-[10px] text-gray-500 font-normal">{sp.businessName}</div>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <a href={`tel:${sp.mobile}`} className="text-trinex-red font-bold hover:underline flex items-center gap-1">
+                                <PhoneCall className="w-3 h-3" />
+                                <span>{sp.mobile}</span>
+                              </a>
+                            </td>
+                            <td className="py-2.5 px-3 text-gray-800">{sp.equipmentBrand}</td>
+                            <td className="py-2.5 px-3 font-bold text-trinex-black">{sp.sparePartRequired}</td>
+                            <td className="py-2.5 px-3 font-mono text-gray-600">{sp.partNumber || '—'}</td>
+                            <td className="py-2.5 px-3 text-gray-500 max-w-xs truncate">{sp.additionalDetails || '—'}</td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <select
+                                value={sp.status}
+                                onChange={(evt) => enquiryStore.updateSpareRequestStatus(sp.id, evt.target.value as EnquiryStatus)}
+                                className={`text-[10px] font-bold rounded-md px-2 py-1 border-2 focus:outline-none transition-colors ${
+                                  sp.status === 'new'
+                                    ? 'bg-red-50 text-trinex-red border-red-200'
+                                    : sp.status === 'contacted'
+                                    ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                    : sp.status === 'in_progress'
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                }`}
+                              >
+                                <option value="new">New</option>
+                                <option value="contacted">Contacted</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Controls */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-gray-500">
+                    <div>
+                      Showing <strong className="text-gray-900">{startIndex + 1}</strong> to <strong className="text-gray-900">{Math.min(startIndex + SPARES_PER_PAGE, filtered.length)}</strong> of <strong className="text-gray-900">{filtered.length}</strong> requests
+                    </div>
+
+                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                      <button
+                        onClick={() => setSpareRequestPage((prev) => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="px-2.5 py-1 rounded-md border-2 border-slate-200 bg-white font-bold text-gray-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Prev</span>
+                      </button>
+
+                      {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          onClick={() => setSpareRequestPage(pageNum)}
+                          className={`w-7 h-7 rounded-md font-bold text-xs transition-colors ${
+                            currentPage === pageNum
+                              ? 'bg-amber-600 text-white'
+                              : 'border-2 border-slate-200 bg-white text-gray-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+
+                      <button
+                        onClick={() => setSpareRequestPage((prev) => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="px-2.5 py-1 rounded-md border-2 border-slate-200 bg-white font-bold text-gray-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1"
+                      >
+                        <span>Next</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-gray-500 py-6 text-center">No spare parts requests match the selected filters.</p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ====================================================
             8. SETTINGS & SUPABASE TAB
@@ -2196,7 +2803,7 @@ export const Admin: React.FC = () => {
           ==================================================== */}
       {productModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-trinex-border overflow-hidden my-8 max-h-[90vh] flex flex-col">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border-2 border-slate-300 overflow-hidden my-8 max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="bg-trinex-black px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
@@ -2722,7 +3329,7 @@ export const Admin: React.FC = () => {
           ==================================================== */}
       {categoryModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-trinex-border overflow-hidden my-8 max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border-2 border-slate-300 overflow-hidden my-8 max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
             <div className="bg-trinex-black px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
@@ -2897,7 +3504,7 @@ export const Admin: React.FC = () => {
           ==================================================== */}
       {spareModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-trinex-border p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border-2 border-slate-300 p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 pb-2">
               <h3 className="font-bold text-base text-trinex-black">
                 {editingSpareId ? 'Edit Spare Part' : '+ Add Spare Part'}
@@ -3063,7 +3670,7 @@ export const Admin: React.FC = () => {
           ==================================================== */}
       {slideModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-trinex-border p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border-2 border-slate-300 p-6 space-y-5 max-h-[90vh] overflow-y-auto">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
@@ -3300,6 +3907,113 @@ export const Admin: React.FC = () => {
         </div>
       )}
 
+
+      {/* ====================================================
+          ADMIN CHANGE PASSWORD MODAL
+          ==================================================== */}
+      {changePasswordModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border-2 border-slate-300 p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150 text-left">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-trinex-black">
+                    Change Admin Password
+                  </h3>
+                  <span className="text-[10px] text-gray-400">Trinex Management Security</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setChangePasswordModalOpen(false)}
+                className="p-1 rounded text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Current Password <span className="text-trinex-red">*</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={currentPasswordInput}
+                  onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                  placeholder="Enter current password (default: trinex@2025)"
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  New Password <span className="text-trinex-red">*</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={newPasswordInput}
+                  onChange={(e) => setNewPasswordInput(e.target.value)}
+                  placeholder="Minimum 5 characters"
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Confirm New Password <span className="text-trinex-red">*</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPasswordInput}
+                  onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                  placeholder="Re-enter new password"
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
+                />
+              </div>
+
+              {passwordChangeError && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-trinex-red text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{passwordChangeError}</span>
+                </div>
+              )}
+
+              {passwordChangeSuccess && (
+                <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+                  <span>{passwordChangeSuccess}</span>
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setChangePasswordModalOpen(false)}
+                  className="px-4 py-2 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-lg bg-trinex-red hover:bg-trinex-red-dark text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5"
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  <span>Update Password</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
