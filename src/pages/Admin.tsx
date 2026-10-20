@@ -22,6 +22,7 @@ import {
   RefreshCw,
   Sparkles,
   Eye,
+  EyeOff,
   Check,
   X,
   Key,
@@ -161,6 +162,7 @@ export const Admin: React.FC = () => {
     return sessionStorage.getItem('trinex_admin_auth') === 'true';
   });
   const [password, setPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [authError, setAuthError] = useState('');
 
   // Submit and Upload Loading States
@@ -314,6 +316,7 @@ export const Admin: React.FC = () => {
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
   const [passwordChangeError, setPasswordChangeError] = useState('');
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
+  const [showModalPassword, setShowModalPassword] = useState(false);
 
   // Dashboard Enquiries Hub Filter States
   const [dashboardEnquiryType, setDashboardEnquiryType] = useState<'all' | 'quotes' | 'services' | 'spares'>('all');
@@ -435,8 +438,11 @@ export const Admin: React.FC = () => {
   // Login handler
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const currentAdminPass = localStorage.getItem('trinex_admin_password') || 'trinex@2025';
-    if (password === currentAdminPass) {
+    const currentAdminPass = (localStorage.getItem('trinex_admin_password') || 'trinex@2025').trim();
+    const entered = (password || '').trim();
+
+    // Supports exact match and case-insensitive match (to handle mobile or Caps auto-capitalization e.g. Trinex vs trinex)
+    if (entered === currentAdminPass || entered.toLowerCase() === currentAdminPass.toLowerCase()) {
       setIsAuthenticated(true);
       sessionStorage.setItem('trinex_admin_auth', 'true');
       setAuthError('');
@@ -455,23 +461,27 @@ export const Admin: React.FC = () => {
     setPasswordChangeError('');
     setPasswordChangeSuccess('');
 
-    const savedPassword = localStorage.getItem('trinex_admin_password') || 'trinex@2025';
-    if (currentPasswordInput !== savedPassword) {
+    const savedPassword = (localStorage.getItem('trinex_admin_password') || 'trinex@2025').trim();
+    const cleanCurrent = (currentPasswordInput || '').trim();
+    const cleanNew = (newPasswordInput || '').trim();
+    const cleanConfirm = (confirmPasswordInput || '').trim();
+
+    if (cleanCurrent !== savedPassword && cleanCurrent.toLowerCase() !== savedPassword.toLowerCase()) {
       setPasswordChangeError('Current password is not correct.');
       return;
     }
 
-    if (newPasswordInput.length < 5) {
+    if (cleanNew.length < 5) {
       setPasswordChangeError('New password must be at least 5 characters long.');
       return;
     }
 
-    if (newPasswordInput !== confirmPasswordInput) {
+    if (cleanNew !== cleanConfirm) {
       setPasswordChangeError('New password and confirm password do not match.');
       return;
     }
 
-    localStorage.setItem('trinex_admin_password', newPasswordInput);
+    localStorage.setItem('trinex_admin_password', cleanNew);
     setPasswordChangeSuccess('Admin password changed successfully!');
     showNotification('Admin password updated successfully!');
     setTimeout(() => {
@@ -1098,14 +1108,24 @@ export const Admin: React.FC = () => {
               <label className="block text-xs font-bold text-gray-700 mb-1">
                 Admin Password
               </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password"
-                className="w-full px-4 py-3 text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
-              />
+              <div className="relative">
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  className="w-full pl-4 pr-11 py-3 text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 p-1 transition-colors"
+                  title={showLoginPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showLoginPassword ? <EyeOff className="w-4 h-4 text-trinex-red" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             {authError && (
@@ -3933,13 +3953,25 @@ export const Admin: React.FC = () => {
               </button>
             </div>
 
+            <div className="flex items-center justify-between text-xs pt-1">
+              <span className="text-[11px] text-gray-500">Ensure passwords are typed accurately</span>
+              <button
+                type="button"
+                onClick={() => setShowModalPassword((prev) => !prev)}
+                className="text-[11px] font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1 transition-colors"
+              >
+                {showModalPassword ? <EyeOff className="w-3.5 h-3.5 text-trinex-red" /> : <Eye className="w-3.5 h-3.5" />}
+                <span>{showModalPassword ? 'Hide Characters' : 'Show Characters'}</span>
+              </button>
+            </div>
+
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
                   Current Password <span className="text-trinex-red">*</span>
                 </label>
                 <input
-                  type="password"
+                  type={showModalPassword ? 'text' : 'password'}
                   required
                   value={currentPasswordInput}
                   onChange={(e) => setCurrentPasswordInput(e.target.value)}
@@ -3953,7 +3985,7 @@ export const Admin: React.FC = () => {
                   New Password <span className="text-trinex-red">*</span>
                 </label>
                 <input
-                  type="password"
+                  type={showModalPassword ? 'text' : 'password'}
                   required
                   value={newPasswordInput}
                   onChange={(e) => setNewPasswordInput(e.target.value)}
@@ -3967,7 +3999,7 @@ export const Admin: React.FC = () => {
                   Confirm New Password <span className="text-trinex-red">*</span>
                 </label>
                 <input
-                  type="password"
+                  type={showModalPassword ? 'text' : 'password'}
                   required
                   value={confirmPasswordInput}
                   onChange={(e) => setConfirmPasswordInput(e.target.value)}
