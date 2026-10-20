@@ -446,6 +446,8 @@ export const Admin: React.FC = () => {
       setIsAuthenticated(true);
       sessionStorage.setItem('trinex_admin_auth', 'true');
       setAuthError('');
+      setPassword('');
+      setShowLoginPassword(false);
     } else {
       setAuthError('Incorrect admin password. Please try again.');
     }
@@ -454,6 +456,9 @@ export const Admin: React.FC = () => {
   const handleLogout = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('trinex_admin_auth');
+    setPassword('');
+    setShowLoginPassword(false);
+    setAuthError('');
   };
 
   const handleChangePassword = (e: React.FormEvent) => {
@@ -1103,7 +1108,7 @@ export const Admin: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
                 Admin Password
@@ -1112,6 +1117,7 @@ export const Admin: React.FC = () => {
                 <input
                   type={showLoginPassword ? 'text' : 'password'}
                   required
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter admin password"
