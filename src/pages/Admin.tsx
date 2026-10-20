@@ -436,12 +436,12 @@ export const Admin: React.FC = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const currentAdminPass = localStorage.getItem('trinex_admin_password') || 'trinex@2025';
-    if (password === currentAdminPass || password === 'trinex@2025' || password === 'admin') {
+    if (password === currentAdminPass) {
       setIsAuthenticated(true);
       sessionStorage.setItem('trinex_admin_auth', 'true');
       setAuthError('');
     } else {
-      setAuthError('Incorrect admin password. (Default is trinex@2025)');
+      setAuthError('Incorrect admin password. Please try again.');
     }
   };
 
@@ -456,11 +456,7 @@ export const Admin: React.FC = () => {
     setPasswordChangeSuccess('');
 
     const savedPassword = localStorage.getItem('trinex_admin_password') || 'trinex@2025';
-    if (
-      currentPasswordInput !== savedPassword &&
-      currentPasswordInput !== 'trinex@2025' &&
-      currentPasswordInput !== 'admin'
-    ) {
+    if (currentPasswordInput !== savedPassword) {
       setPasswordChangeError('Current password is not correct.');
       return;
     }
@@ -1107,7 +1103,7 @@ export const Admin: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password (default: trinex@2025)"
+                placeholder="Enter admin password"
                 className="w-full px-4 py-3 text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
               />
             </div>
@@ -3947,7 +3943,7 @@ export const Admin: React.FC = () => {
                   required
                   value={currentPasswordInput}
                   onChange={(e) => setCurrentPasswordInput(e.target.value)}
-                  placeholder="Enter current password (default: trinex@2025)"
+                  placeholder="Enter current password"
                   className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-lg border-2 border-slate-300 focus:border-trinex-red focus:ring-1 focus:ring-trinex-red bg-slate-50/50 hover:border-slate-400 transition-colors focus:outline-none font-medium"
                 />
               </div>
